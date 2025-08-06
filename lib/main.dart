@@ -1,5 +1,54 @@
-
+// Экран регистрации
 import 'package:flutter/material.dart';
+// Экран регистрации
+class RegisterScreen extends StatelessWidget {
+  const RegisterScreen({super.key});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Регистрация'),
+        backgroundColor: Colors.white,
+        elevation: 1,
+      ),
+      body: Center(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(
+                  'Создайте аккаунт',
+                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                TextField(
+                  decoration: InputDecoration(
+                    labelText: 'Email',
+                    prefixIcon: Icon(Icons.email_outlined),
+                  ),
+                ),
+                SizedBox(height: 16),
+                _PasswordField(),
+                SizedBox(height: 24),
+                ElevatedButton(
+                  onPressed: () {
+                    // TODO: Реализовать регистрацию
+                    Navigator.pop(context);
+                  },
+                  child: Text('Зарегистрироваться'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 
 // Класс для информации о приложении
 
@@ -76,8 +125,8 @@ class VpnApp extends StatelessWidget {
       routes: {
         '/login': (_) => LoginScreen(),
         '/home': (_) => HomeScreen(),
-        // '/split': (_) => SplitTunnelingScreen(), // Экран не реализован
         '/subscription': (_) => SubscriptionScreen(),
+        '/register': (_) => RegisterScreen(), // Новый маршрут
       },
     );
   }
@@ -132,11 +181,6 @@ class LoginScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Вход'),
-        backgroundColor: Colors.white,
-        elevation: 1,
-      ),
       body: Center(
         child: SingleChildScrollView(
           child: Padding(
@@ -174,44 +218,47 @@ class LoginScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Expanded(child: Divider()),
-                    Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                      child: Text('или'),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white,
+                            foregroundColor: Color(0xFF4285F4),
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: Color(0xFF4285F4), width: 2),
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () {
+                            // TODO: Реализовать Google Sign-In
+                          },
+                          child: Text('G', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold)),
+                        ),
+                      ),
                     ),
-                    Expanded(child: Divider()),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.black,
+                            foregroundColor: Colors.white,
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            side: BorderSide(color: Colors.black, width: 2),
+                            padding: EdgeInsets.symmetric(vertical: 14),
+                          ),
+                          onPressed: () {
+                            // TODO: Реализовать Apple Sign-In
+                          },
+                          child: Icon(Icons.apple, size: 28),
+                        ),
+                      ),
+                    ),
                   ],
-                ),
-                SizedBox(height: 16),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
-                    foregroundColor: Colors.black87,
-                    elevation: 1,
-                    side: BorderSide(color: Colors.grey.shade300),
-                  ),
-                  icon: Image.network(
-                    'https://upload.wikimedia.org/wikipedia/commons/4/4a/Logo_2013_Google.png',
-                    height: 24,
-                  ),
-                  label: Text('Войти через Google'),
-                  onPressed: () {
-                    // TODO: Реализовать Google Sign-In
-                  },
-                ),
-                SizedBox(height: 12),
-                ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.black,
-                    foregroundColor: Colors.white,
-                    elevation: 1,
-                  ),
-                  icon: Icon(Icons.apple, size: 24),
-                  label: Text('Войти через Apple'),
-                  onPressed: () {
-                    // TODO: Реализовать Apple Sign-In
-                  },
                 ),
                 SizedBox(height: 24),
                 Row(
@@ -220,7 +267,7 @@ class LoginScreen extends StatelessWidget {
                     Text('Нет аккаунта?'),
                     TextButton(
                       onPressed: () {
-                        // TODO: Реализовать регистрацию
+                        Navigator.pushNamed(context, '/register');
                       },
                       child: Text('Зарегистрироваться'),
                     ),
@@ -232,6 +279,7 @@ class LoginScreen extends StatelessWidget {
         ),
       ),
     );
+// Экран регистрации
   }
 }
 
@@ -335,9 +383,10 @@ class HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFF8FAFF),
       appBar: AppBar(
-        title: Text('Главная'),
         backgroundColor: Colors.white,
         elevation: 1,
+        automaticallyImplyLeading: false, // убирает кнопку назад
+        title: null, // убирает заголовок
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -357,13 +406,13 @@ class HomeScreenState extends State<HomeScreen> {
                             : Color(0xFFF3F4F6))),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 0),
+                  padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
                   child: Center(
                     child: Text(
                       _getStatusText(),
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 17,
+                        fontWeight: FontWeight.w600,
                         color: _isExpired()
                             ? Colors.red
                             : (_hasActiveSubscription
@@ -376,38 +425,41 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                 ),
               ),
-              SizedBox(height: 24),
+              SizedBox(height: 20),
               // Кнопка купить подписку
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF6366F1),
-                  foregroundColor: Colors.white,
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  textStyle: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () {
-                  Navigator.pushNamed(context, '/subscription');
-                },
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.shopping_cart, size: 26),
-                    SizedBox(width: 12),
-                    Text('Купить подписку'),
-                  ],
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Color(0xFF6366F1),
+                    foregroundColor: Colors.white,
+                    elevation: 8,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    Navigator.pushNamed(context, '/subscription');
+                  },
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.shopping_cart, size: 24),
+                      SizedBox(width: 10),
+                      Text('Купить подписку'),
+                    ],
+                  ),
                 ),
               ),
-              SizedBox(height: 36),
+              SizedBox(height: 28),
               // Кнопка подключения
               Center(
                 child: GestureDetector(
                   onTap: _toggleVpn,
                   child: AnimatedContainer(
                     duration: Duration(milliseconds: 300),
-                    width: 170,
-                    height: 170,
+                    width: 140,
+                    height: 140,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: _connected
@@ -419,8 +471,8 @@ class HomeScreenState extends State<HomeScreen> {
                       boxShadow: [
                         BoxShadow(
                           color: (_connected ? Color(0xFF6366F1) : Color(0xFFCBD5E1)).withAlpha(60),
-                          blurRadius: 36,
-                          offset: Offset(0, 18),
+                          blurRadius: 24,
+                          offset: Offset(0, 12),
                         ),
                       ],
                       shape: BoxShape.circle,
@@ -428,116 +480,135 @@ class HomeScreenState extends State<HomeScreen> {
                     child: Center(
                       child: Icon(
                         _connected ? Icons.lock_open : Icons.lock,
-                        size: 72,
+                        size: 54,
                         color: Colors.white,
                       ),
                     ),
                   ),
                 ),
               ),
-              SizedBox(height: 18),
+              SizedBox(height: 24),
               // Кнопка "Выбрать приложения"
-              ElevatedButton.icon(
-                icon: Icon(Icons.tune),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Color(0xFF6366F1),
-                  elevation: 0,
-                  side: BorderSide(color: Color(0xFF6366F1), width: 1.2),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  padding: EdgeInsets.symmetric(vertical: 18),
-                  textStyle: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => StatefulBuilder(
-                      builder: (context, setStateDialog) => AlertDialog(
-                        title: Text('Выберите приложения для VPN'),
-                        content: SizedBox(
-                          width: double.maxFinite,
-                          child: Column(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  TextButton(
-                                    onPressed: () {
-                                      setStateDialog(() {
-                                        for (var app in _apps) {
-                                          _selectedApps[app.name] = true;
-                                        }
-                                      });
-                                      setState(() {
-                                        for (var app in _apps) {
-                                          _selectedApps[app.name] = true;
-                                        }
-                                      });
-                                    },
-                                    child: Text('Включить все'),
-                                  ),
-                                  TextButton(
-                                    onPressed: () {
-                                      setStateDialog(() {
-                                        for (var app in _apps) {
-                                          _selectedApps[app.name] = false;
-                                        }
-                                      });
-                                      setState(() {
-                                        for (var app in _apps) {
-                                          _selectedApps[app.name] = false;
-                                        }
-                                      });
-                                    },
-                                    child: Text('Выключить все'),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: 8),
-                              Expanded(
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  itemCount: _apps.length,
-                                  itemBuilder: (context, i) {
-                                    final app = _apps[i];
-                                    final enabled = _selectedApps[app.name] ?? true;
-                                    return ListTile(
-                                      leading: Icon(app.icon, color: Color(0xFF6366F1)),
-                                      title: Text(app.name),
-                                      trailing: Switch(
-                                        value: enabled,
-                                        onChanged: (val) {
-                                          setStateDialog(() {
-                                            _selectedApps[app.name] = val;
-                                          });
-                                          setState(() {
-                                            _selectedApps[app.name] = val;
-                                          });
-                                        },
-                                        activeColor: Color(0xFF6366F1),
-                                      ),
-                                    );
-                                  },
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: ElevatedButton.icon(
+                  icon: Icon(Icons.tune),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Color(0xFF6366F1),
+                    elevation: 0,
+                    side: BorderSide(color: Color(0xFF6366F1), width: 1.2),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => StatefulBuilder(
+                        builder: (context, setStateDialog) => AlertDialog(
+                          title: Text('Выберите приложения для VPN'),
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    TextButton(
+                                      onPressed: () {
+                                        setStateDialog(() {
+                                          for (var app in _apps) {
+                                            _selectedApps[app.name] = true;
+                                          }
+                                        });
+                                        setState(() {
+                                          for (var app in _apps) {
+                                            _selectedApps[app.name] = true;
+                                          }
+                                        });
+                                      },
+                                      child: Text('Включить все'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () {
+                                        setStateDialog(() {
+                                          for (var app in _apps) {
+                                            _selectedApps[app.name] = false;
+                                          }
+                                        });
+                                        setState(() {
+                                          for (var app in _apps) {
+                                            _selectedApps[app.name] = false;
+                                          }
+                                        });
+                                      },
+                                      child: Text('Выключить все'),
+                                    ),
+                                  ],
                                 ),
-                              ),
-                            ],
+                                SizedBox(height: 8),
+                                Expanded(
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    itemCount: _apps.length,
+                                    itemBuilder: (context, i) {
+                                      final app = _apps[i];
+                                      final enabled = _selectedApps[app.name] ?? true;
+                                      return ListTile(
+                                        leading: Icon(app.icon, color: Color(0xFF6366F1)),
+                                        title: Text(app.name),
+                                        trailing: Switch(
+                                          value: enabled,
+                                          onChanged: (val) {
+                                            setStateDialog(() {
+                                              _selectedApps[app.name] = val;
+                                            });
+                                            setState(() {
+                                              _selectedApps[app.name] = val;
+                                            });
+                                          },
+                                          activeColor: Color(0xFF6366F1),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(context).pop(),
+                              child: Text('Готово'),
+                            ),
+                          ],
                         ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: Text('Готово'),
-                          ),
-                        ],
                       ),
-                    ),
-                  );
-                },
-                label: Text('Выбрать приложения'),
+                    );
+                  },
+                  label: Text('Выбрать приложения'),
+                ),
               ),
             ],
           ),
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+        child: OutlinedButton.icon(
+          icon: Icon(Icons.logout),
+          label: Text('Выйти из профиля'),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Color(0xFFEF4444),
+            textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            padding: EdgeInsets.symmetric(vertical: 16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          onPressed: () {
+            // TODO: Реализовать выход из профиля
+          },
         ),
       ),
     );
@@ -558,7 +629,7 @@ class SubscriptionScreen extends StatelessWidget {
       body: Padding(
         padding: EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               margin: EdgeInsets.only(bottom: 0),
@@ -568,17 +639,42 @@ class SubscriptionScreen extends StatelessWidget {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text('Пробный период', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6))),
+                  Text('Пробный период', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Color(0xFF3B82F6)), textAlign: TextAlign.center),
                   SizedBox(height: 4),
-                  Text('7 дней бесплатного доступа', style: TextStyle(fontSize: 15, color: Color(0xFF60A5FA))),
+                  Text('7 дней бесплатного доступа', style: TextStyle(fontSize: 15, color: Color(0xFF60A5FA)), textAlign: TextAlign.center),
                 ],
               ),
             ),
             SizedBox(height: 24),
+            Text(
+              'Купите подписку в нашем телеграм боте.',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF6366F1)),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            SubscriptionCard(
+              title: '1 месяц',
+              price: '100 ⭐',
+              showBuyButton: false,
+              onTap: () {},
+            ),
+            SubscriptionCard(
+              title: '6 месяцев',
+              price: '500 ⭐',
+              showBuyButton: false,
+              onTap: () {},
+            ),
+            SubscriptionCard(
+              title: '1 год',
+              price: '900 ⭐',
+              showBuyButton: false,
+              onTap: () {},
+            ),
+            SizedBox(height: 24),
             ElevatedButton.icon(
-              icon: Icon(Icons.shopping_cart),
+              icon: Icon(Icons.send), // иконка Telegram
               label: Text('Купить подписку'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Color(0xFF6366F1),
@@ -588,34 +684,10 @@ class SubscriptionScreen extends StatelessWidget {
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               onPressed: () {
-                // TODO: обработка покупки подписки
+                // TODO: переход в Telegram бот
               },
             ),
-            SizedBox(height: 32),
-            SubscriptionCard(
-              title: '1 месяц',
-              price: '100 ⭐',
-              onTap: () {},
-            ),
-            SubscriptionCard(
-              title: '6 месяцев',
-              price: '500 ⭐',
-              onTap: () {},
-            ),
-            SubscriptionCard(
-              title: '1 год',
-              price: '900 ⭐',
-              onTap: () {},
-            ),
-            Spacer(),
-            Center(
-              child: OutlinedButton.icon(
-                icon: Icon(Icons.logout),
-                onPressed: () {},
-                label: Text('Выйти'),
-                style: OutlinedButton.styleFrom(foregroundColor: Color(0xFFEF4444)),
-              ),
-            )
+            // Spacer() и кнопка выйти убраны
           ],
         ),
       ),
@@ -627,8 +699,15 @@ class SubscriptionCard extends StatelessWidget {
   final String title;
   final String price;
   final VoidCallback onTap;
+  final bool showBuyButton;
 
-  const SubscriptionCard({super.key, required this.title, required this.price, required this.onTap});
+  const SubscriptionCard({
+    super.key,
+    required this.title,
+    required this.price,
+    required this.onTap,
+    this.showBuyButton = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -649,16 +728,17 @@ class SubscriptionCard extends StatelessWidget {
                 Text(price, style: TextStyle(fontSize: 16, color: Color(0xFF6366F1))),
               ],
             ),
-            ElevatedButton(
-              onPressed: onTap,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF6366F1),
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                padding: EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+            if (showBuyButton)
+              ElevatedButton(
+                onPressed: onTap,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF6366F1),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  padding: EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                ),
+                child: Text('Купить'),
               ),
-              child: Text('Купить'),
-            ),
           ],
         ),
       ),
