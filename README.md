@@ -1,6 +1,6 @@
 # vpn
 
-A new Flutter project.
+Vpn project on dart flutter. At the moment only android version of the application is supported. In the future I plan to add iOS version and Desctop. I plan to write the backend on Python Fast API. The load balancer has not yet been investigated VPS and VDS is not a problem now. I will be glad to your comments and help.
 
 ## Getting Started
 
