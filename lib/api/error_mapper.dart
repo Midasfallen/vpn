@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'api_client.dart';
 import 'package:easy_localization/easy_localization.dart';
-import '../localization.dart';
 
 /// Преобразует ApiException/Exception в локализованное сообщение для пользователя.
 String mapErrorToMessage(Object e) {
@@ -159,7 +158,7 @@ Map<String, List<String>> parseFieldErrors(Object e) {
         }
       } else {
         // parsed not map — try to translate raw body string
-        final rawString = e.body?.toString() ?? '';
+        final rawString = e.body.toString();
         if (rawString.isNotEmpty) {
           final t = translate(rawString);
           out.putIfAbsent('_form', () => []).add(t);
