@@ -1,189 +1,84 @@
-# vpn
+# VPN Flutter Project — API Client documentation
 
-Подробная информация по проекту Flutter "vpn".
+Краткое описание изменений и инструкции по использованию ApiClient, тестированию и CI.
 
-## Краткое описание
-vpn — Flutter-приложение с приоритетной поддержкой Android. В проекте заложена структура для кроссплатформенной сборки (iOS, Windows, macOS, Linux, Web), но в настоящий момент основная рабочая версия — Android.
+## Что сделано
+- Добавлен централизованный логгер `lib/api/logging.dart` (ApiLogger) для консольного и developer.log логирования.
+- ApiClient (`lib/api/api_client.dart`):
+  - Валидация входных параметров (path, mapper, params).
+  - Retry-механизм для transient ошибок (SocketException, HttpException, TimeoutException и http.ClientException) с экспоненциальной задержкой.
+  - Автоматическое обновление токена при получении 401 через callback `onRefreshToken`.
+  - Проверка валидности JWT-токена (`isTokenValid`).
+  - Обработка пустого/невалидного JSON в теле ответа — mapper получает `null` или raw string.
+  - Центральные исключения `ApiException`.
+- Unit-тесты: `test/api_client_test.dart` — покрывают get/post, retry, пустое тело и refresh-token логику.
+- .gitattributes для унификации окончаний строк (LF и бинарные файлы).
+- CI: GitHub Actions workflow для запуска `flutter pub get` и `flutter test`.
 
-## Структура проекта (важные файлы и папки)
-- lib/ — основной код приложения.
-  - Главный файл приложения: [`VpnApp`](lib/main.dart) и точка входа [`main`](lib/main.dart) — [lib/main.dart](lib/main.dart).
-  - UI и логика находятся в [lib/main.dart](lib/main.dart) (есть экраны входа, регистрации, подписки и основной экран с кнопкой VPN).
-- android/ — Android-проект.
-  - Основная активность: [`MainActivity`](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt) — [android/app/src/main/kotlin/com/example/vpn/MainActivity.kt](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt).
-  - Конфигурация сборки: [android/app/build.gradle.kts](android/app/build.gradle.kts).
-- ios/ — проект iOS (шаблон Xcode).
-  - Основной Info.plist: [ios/Runner/Info.plist](ios/Runner/Info.plist).
-  - Xcode-проекты и конфигурации находятся в ios/Runner.xcodeproj.
-- windows/, linux/, macos/ — шаблоны для десктопов.
-  - Windows: конфигурация CMake — [windows/CMakeLists.txt](windows/CMakeLists.txt) и раннер — [windows/runner/main.cpp](windows/runner/main.cpp).
-  - Linux: [linux/CMakeLists.txt](linux/CMakeLists.txt).
-  - macOS: Xcode-проект в macos/.
-- web/ — веб-ресурсы:
-  - Точка входа: [web/index.html](web/index.html) и [web/manifest.json](web/manifest.json).
-- pubspec.yaml — зависимости, версия приложения и метаданные — [pubspec.yaml](pubspec.yaml).
+## Архитектура и взаимодействие модулей
+- lib/api/api_client.dart — лёгкая обёртка над `package:http`.
+  - Не хранит токен в безопасном хранилище — предоставляет `setToken` и опциональный `onRefreshToken` callback.
+- lib/api/token_storage.dart — абстракция для сохранения токена (на базе flutter_secure_storage). Слой авторизации (VpnService) отвечает за вызовы `TokenStorage`.
+- lib/api/vpn_service.dart — использует ApiClient для реализации конкретных API-вызовов (login/register/me и т.д.). При логине сохраняет токен в TokenStorage и вызывает `api.setToken`.
 
-## Как запустить (локально)
-1. Установить Flutter SDK и настроить окружение.
-2. В корне проекта выполнить (Android-устройство или эмулятор):
-   - Проверка: flutter doctor
-   - Запуск: flutter run -d <device-id>
-3. Сборка релизной APK:
-   - flutter build apk --release
-4. Запуск на других платформах:
-   - iOS: требуется Xcode; собрать из каталога ios (учесть bundle identifier в [ios/Runner/Info.plist](ios/Runner/Info.plist)).
-   - Windows/Linux/macOS: доступны CMake-конфигурации в соответствующих папках ([windows/CMakeLists.txt](windows/CMakeLists.txt), [linux/CMakeLists.txt](linux/CMakeLists.txt)).
+Межъязыковое взаимодействие
+- Приложение — Flutter (Dart). Нативные плагины используются через платформенные каналы (например, flutter_secure_storage) и не зависят от ApiClient.
+- Архитектура разделяет:
+  - сетевой слой (ApiClient),
+  - бизнес-логику (VpnService),
+  - хранение секретов (TokenStorage).
 
-## Где править что
-- Логика и UI: [lib/main.dart](lib/main.dart) — здесь расположены основные виджеты, состояние VPN, экран подписки и диалоги выбора приложений.
-- Метаданные приложения:
-  - Версия и номер сборки: [pubspec.yaml](pubspec.yaml).
-  - Android: [android/app/build.gradle.kts](android/app/build.gradle.kts) (applicationId, minSdk, targetSdk, versionCode/name).
-  - iOS: [ios/Runner/Info.plist](ios/Runner/Info.plist) и настройки Xcode.
-- Платформенные расширения и плагины:
-  - Генерация и подключение плагинов для Windows: [windows/flutter/CMakeLists.txt](windows/flutter/CMakeLists.txt) и [windows/runner/CMakeLists.txt](windows/runner/CMakeLists.txt).
-  - Регистрация плагинов во время сборки — см. include flutter/generated_plugins.cmake в CMake-файлах.
+Это позволяет тестировать сетевой слой независимо, мокая http.Client (используется в тестах MockClient).
 
-## Замечания по коду
-- В UI есть заглушки и TODO:
-  - Регистрация: в [lib/main.dart](lib/main.dart) отмечена TODO для реализации регистрации.
-  - Apple Sign-In: пометка TODO в соответствующей кнопке в [lib/main.dart](lib/main.dart).
-- Локализация: интерфейс частично на русском — при необходимости вынести в l10n.
-- Подписки/платежи: реализовано отображение триала и подписки в UI, но реальная интеграция платежей/серверной логики отсутствует.
-
-## Рекомендации по развитию
-- Реализовать бэкенд (планируется на FastAPI) и API для управления подписками и распределения серверов.
-- Добавить обработку состояния VPN на уровне платформ (Android VpnService и соответствующие native-модули).
-- Настроить CI/CD (сборка релизов Android и тесты UI).
-- Добавить локализацию и разделение конфигураций для production/dev.
-
-## Полезные ссылки в проекте
-- Главный код: [`VpnApp`](lib/main.dart) — [lib/main.dart](lib/main.dart)
-- Точка входа Android: [`MainActivity`](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt) — [android/app/src/main/kotlin/com/example/vpn/MainActivity.kt](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt)
-- Сборки: [android/app/build.gradle.kts](android/app/build.gradle.kts), [pubspec.yaml](pubspec.yaml)
-- iOS: [ios/Runner/Info.plist](ios/Runner/Info.plist)
-- Десктоп: [windows/CMakeLists.txt](windows/CMakeLists.txt), [linux/CMakeLists.txt](linux/CMakeLists.txt)
-- Веб: [web/index.html](web/index.html)
-
-Если требуется, можно подготовить:
-- Конкретную инструкцию по сборке и выпуску APK/AAB.
-- План миграции кода в модули и выделения бизнес-логики.
-- Примеры интеграции native VPN на Android.
-
-## Backend API (интеграция)
-
-Проект может взаимодействовать с бэкендом, доступным по адресу http://146.103.99.70:8000/ — он предоставляет OpenAPI спецификацию (Swagger) по /docs и /openapi.json.
-
-Ключевые моменты API:
-- Аутентификация: OAuth2 password flow (security scheme `OAuth2PasswordBearer`, tokenUrl: `/auth/login`). После получения токена его следует передавать в заголовке Authorization: Bearer <token>.
-- Пользователи: `/auth/register` (POST), `/auth/login` (POST), `/auth/me` (GET).
-- Тарифы: `/tariffs/` (GET, POST), `/tariffs/{tariff_id}` (DELETE).
-- VPN peers: `/vpn_peers/` (GET, POST), `/vpn_peers/{peer_id}` (GET, PUT, DELETE).
-- Платежи: `/payments/` (GET, POST), `/payments/{payment_id}` (GET, PUT, DELETE).
-
-Модели (частично):
-- UserCreate, UserLogin, UserOut
-- TariffCreate, TariffOut
-- VpnPeerCreate, VpnPeerOut
-- PaymentCreate, PaymentOut
-
-Быстрый пример использования (файлы в проекте: `lib/api/api_client.dart`, `lib/api/models.dart`, `lib/api/vpn_service.dart`):
-
-1) Инициализация клиента:
+## Как использовать ApiClient
+Пример инициализации:
 
 ```dart
-final api = ApiClient(baseUrl: 'http://146.103.99.70:8000');
-final vpnService = VpnService(api: api);
+final api = ApiClient(
+  baseUrl: 'https://api.example.com',
+  onRefreshToken: () async {
+    // вызвать refresh у авторизационного сервиса, сохранить новый токен и вернуть его
+    return await AuthService.refreshToken();
+  },
+);
+
+// После логина
+api.setToken(token);
+
+// Вызов
+final user = await api.get<Map<String, dynamic>>('/auth/me', (json) => json as Map<String, dynamic>);
 ```
 
-2) Логин и получение текущего пользователя:
+Mapper
+- Mapper — функция, которая принимает dynamic (Map/List/null/String) и возвращает доменную модель или примитив.
+- ApiClient оборачивает ошибки mapper в ApiException чтобы верхние слои могли корректно реагировать.
 
-```dart
-final token = await vpnService.login('user@example.com', 'password');
-final me = await vpnService.me();
-print('Logged in user: ${me.email}');
+## Тесты
+Запуск локально:
+
+```
+flutter pub get
+flutter test
 ```
 
-3) Получение списка тарифов / peers:
+В тестах используется `package:http/testing` (MockClient) для контроля ответов и симуляции ошибок.
 
-```dart
-final tariffs = await vpnService.listTariffs();
-final peers = await vpnService.listPeers(userId: me.id);
-```
+## CI / CD
+Добавлен GitHub Actions workflow в `.github/workflows/ci.yaml`, который запускает:
+- setup flutter
+- flutter pub get
+- flutter analyze
+- flutter test
 
-Замечания:
-- Клиент в `lib/api` — минимальный лёгковесный обёртка над HTTP и ручной сериализацией. Можно безопасно расширить её (обработка ошибок, рефреш токена, retry, таймауты).
-- Для production рекомендуется добавить безопасное хранение токена (secure_storage), обработку ошибок и unit-тесты для сервиса.
+При желании добавить сборку APK/IPA или публикацию — расширьте workflow соответствующими шагами.
 
-```// filepath: c:\Users\ravin\OneDrive\Рабочий стол\vpn\README.md
-# vpn
+## Советы по безопасности
+- ApiClient хранит токен только в памяти. Сохраняйте токен в `flutter_secure_storage` (TokenStorage) при логине.
+- Не логируйте полный токен — ApiClient логирует маскированную версию.
 
-Подробная информация по проекту Flutter "vpn".
+## Дальнейшие улучшения (необязательно)
+- Поддержка refresh токена с использованием refresh-token flow (восстановление через эндпоинт).
+- Интеграция с Sentry/Crashlytics для централизованной отправки ошибок.
+- Перенос логики retry в отдельный interceptor/плагин.
 
-## Краткое описание
-vpn — Flutter-приложение с приоритетной поддержкой Android. В проекте заложена структура для кроссплатформенной сборки (iOS, Windows, macOS, Linux, Web), но в настоящий момент основная рабочая версия — Android.
 
-## Структура проекта (важные файлы и папки)
-- lib/ — основной код приложения.
-  - Главный файл приложения: [`VpnApp`](lib/main.dart) и точка входа [`main`](lib/main.dart) — [lib/main.dart](lib/main.dart).
-  - UI и логика находятся в [lib/main.dart](lib/main.dart) (есть экраны входа, регистрации, подписки и основной экран с кнопкой VPN).
-- android/ — Android-проект.
-  - Основная активность: [`MainActivity`](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt) — [android/app/src/main/kotlin/com/example/vpn/MainActivity.kt](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt).
-  - Конфигурация сборки: [android/app/build.gradle.kts](android/app/build.gradle.kts).
-- ios/ — проект iOS (шаблон Xcode).
-  - Основной Info.plist: [ios/Runner/Info.plist](ios/Runner/Info.plist).
-  - Xcode-проекты и конфигурации находятся в ios/Runner.xcodeproj.
-- windows/, linux/, macos/ — шаблоны для десктопов.
-  - Windows: конфигурация CMake — [windows/CMakeLists.txt](windows/CMakeLists.txt) и раннер — [windows/runner/main.cpp](windows/runner/main.cpp).
-  - Linux: [linux/CMakeLists.txt](linux/CMakeLists.txt).
-  - macOS: Xcode-проект в macos/.
-- web/ — веб-ресурсы:
-  - Точка входа: [web/index.html](web/index.html) и [web/manifest.json](web/manifest.json).
-- pubspec.yaml — зависимости, версия приложения и метаданные — [pubspec.yaml](pubspec.yaml).
-
-## Как запустить (локально)
-1. Установить Flutter SDK и настроить окружение.
-2. В корне проекта выполнить (Android-устройство или эмулятор):
-   - Проверка: flutter doctor
-   - Запуск: flutter run -d <device-id>
-3. Сборка релизной APK:
-   - flutter build apk --release
-4. Запуск на других платформах:
-   - iOS: требуется Xcode; собрать из каталога ios (учесть bundle identifier в [ios/Runner/Info.plist](ios/Runner/Info.plist)).
-   - Windows/Linux/macOS: доступны CMake-конфигурации в соответствующих папках ([windows/CMakeLists.txt](windows/CMakeLists.txt), [linux/CMakeLists.txt](linux/CMakeLists.txt)).
-
-## Где править что
-- Логика и UI: [lib/main.dart](lib/main.dart) — здесь расположены основные виджеты, состояние VPN, экран подписки и диалоги выбора приложений.
-- Метаданные приложения:
-  - Версия и номер сборки: [pubspec.yaml](pubspec.yaml).
-  - Android: [android/app/build.gradle.kts](android/app/build.gradle.kts) (applicationId, minSdk, targetSdk, versionCode/name).
-  - iOS: [ios/Runner/Info.plist](ios/Runner/Info.plist) и настройки Xcode.
-- Платформенные расширения и плагины:
-  - Генерация и подключение плагинов для Windows: [windows/flutter/CMakeLists.txt](windows/flutter/CMakeLists.txt) и [windows/runner/CMakeLists.txt](windows/runner/CMakeLists.txt).
-  - Регистрация плагинов во время сборки — см. include flutter/generated_plugins.cmake в CMake-файлах.
-
-## Замечания по коду
-- В UI есть заглушки и TODO:
-  - Регистрация: в [lib/main.dart](lib/main.dart) отмечена TODO для реализации регистрации.
-  - Apple Sign-In: пометка TODO в соответствующей кнопке в [lib/main.dart](lib/main.dart).
-- Локализация: интерфейс частично на русском — при необходимости вынести в l10n.
-- Подписки/платежи: реализовано отображение триала и подписки в UI, но реальная интеграция платежей/серверной логики отсутствует.
-
-## Рекомендации по развитию
-- Реализовать бэкенд (планируется на FastAPI) и API для управления подписками и распределения серверов.
-- Добавить обработку состояния VPN на уровне платформ (Android VpnService и соответствующие native-модули).
-- Настроить CI/CD (сборка релизов Android и тесты UI).
-- Добавить локализацию и разделение конфигураций для production/dev.
-
-## Полезные ссылки в проекте
-- Главный код: [`VpnApp`](lib/main.dart) — [lib/main.dart](lib/main.dart)
-- Точка входа Android: [`MainActivity`](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt) — [android/app/src/main/kotlin/com/example/vpn/MainActivity.kt](android/app/src/main/kotlin/com/example/vpn/MainActivity.kt)
-- Сборки: [android/app/build.gradle.kts](android/app/build.gradle.kts), [pubspec.yaml](pubspec.yaml)
-- iOS: [ios/Runner/Info.plist](ios/Runner/Info.plist)
-- Десктоп: [windows/CMakeLists.txt](windows/CMakeLists.txt), [linux/CMakeLists.txt](linux/CMakeLists.txt)
-- Веб: [web/index.html](web/index.html)
-
-Если требуется, можно подготовить:
-- Конкретную инструкцию по сборке и выпуску APK/AAB.
-- План миграции кода в модули и выделения бизнес-логики.
-- Примеры интеграции native VPN на Android.

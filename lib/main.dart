@@ -3,6 +3,8 @@ import 'package:flutter_login/flutter_login.dart';
 import 'package:easy_localization/easy_localization.dart';
 import 'api/client_instance.dart';
 import 'api/error_mapper.dart';
+import 'api/models.dart';
+import 'api/token_storage.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -31,7 +33,7 @@ class VpnApp extends StatelessWidget {
       locale: context.locale,
       home: const SplashScreen(),
       routes: {
-        '/login': (_) => const AuthScreen(),
+        '/login': (_) => const AuthScreen(key: Key('login-screen')), // <- вот так
         '/register': (_) => const RegisterScreen(),
         '/home': (_) => const HomeScreen(),
         '/subscription': (_) => const SubscriptionScreen(),
@@ -147,9 +149,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           _fieldErrors.addAll(parsed);
           _formError = _fieldErrors['_form']?.join('\n');
         });
-        final summary = _fieldErrors.entries.expand((kv) => kv.value.map((m) => '${kv.key == '_form' ? '' : kv.key + ': '}$m')).join('\n');
+        final summary = _fieldErrors.entries.expand((kv) => kv.value.map((m) => kv.key == '_form' ? m : '${kv.key}: $m')).join('\n');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(summary)));
-        // Если среди ошибок есть информация что email уже зарегистрирован, предложим перейти на вход
         final emailErrors = parsed['email'] ?? parsed['Email'] ?? parsed['e-mail'];
         if (emailErrors != null && emailErrors.any((m) => m.toLowerCase().contains('email уже зарегистрирован') || m.toLowerCase().contains('already'))) {
           await showDialog<void>(
@@ -306,31 +307,34 @@ class _LoginScreenState extends State<LoginScreen> {
           _fieldErrors.addAll(parsed);
           _formError = _fieldErrors['_form']?.join('\n');
         });
-        final summary = _fieldErrors.entries.expand((kv) => kv.value.map((m) => '${kv.key == '_form' ? '' : kv.key + ': '}$m')).join('\n');
+        final summary = _fieldErrors.entries
+            .expand((kv) => kv.value.map((m) => kv.key == '_form' ? m : '${kv.key}: $m'))
+            .join('\n');
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(summary)));
-      } else {
-        final msg = mapErrorToMessage(e);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-        // Предложить восстановление пароля при неверных учетных данных
-        if (msg.toLowerCase().contains('неверный логин') || msg.toLowerCase().contains('логин или пароль')) {
-          await showDialog<void>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(tr('login_error_title')),
-              content: Text('${tr('invalid_credentials')} ${tr('recover_password')}?'),
-              actions: [
-                TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('cancel'))),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('recover_password'))));
-                  },
-                  child: Text(tr('recover_password')),
-                ),
-              ],
-            ),
-          );
-        }
+        return;
+      }
+
+      final msg = mapErrorToMessage(e);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+      // Предложить восстановление пароля при неверных учетных данных
+      if (msg.toLowerCase().contains('неверный') || msg.toLowerCase().contains('логин') || msg.toLowerCase().contains('пароль')) {
+        await showDialog<void>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(tr('login_error_title')),
+            content: Text('${tr('invalid_credentials')} ${tr('recover_password')}?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('cancel'))),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('recover_password'))));
+                },
+                child: Text(tr('recover_password')),
+              ),
+            ],
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -698,6 +702,7 @@ class HomeScreenState extends State<HomeScreen> {
       bottomNavigationBar: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
         child: OutlinedButton.icon(
+          key: const Key('logout-button'),
           icon: Icon(Icons.logout),
           label: Text('Выйти из профиля'),
           style: OutlinedButton.styleFrom(
@@ -706,35 +711,175 @@ class HomeScreenState extends State<HomeScreen> {
             padding: EdgeInsets.symmetric(vertical: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           ),
-          onPressed: () {
-            // TODO: Реализовать выход из профиля
+          onPressed: () async {
+            await _logout();
           },
         ),
       ),
     );
   }
+
+  Future<void> _logout() async {
+    try {
+      // Удаляем токен из безопасного хранилища
+      await TokenStorage.deleteToken();
+    } catch (e) {
+      // Логируем ошибку удаления токена, но не мешаем процессу выхода
+      // ignore: avoid_print
+      print('TokenStorage.deleteToken failed: $e');
+    }
+
+    try {
+      // Очищаем токен в ApiClient
+      apiClient.clearToken();
+    } catch (e) {
+      // ignore
+    }
+
+    // Навигация: очистить стек и показать экран логина
+    if (!mounted) return;
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+  }
 }
 
-class SubscriptionScreen extends StatelessWidget {
+class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
+
   @override
-  Widget build(BuildContext context) => Scaffold(appBar: AppBar(title: const Text('Subscription')), body: const Center(child: Text('Subscription')));
+  State<SubscriptionScreen> createState() => _SubscriptionScreenState();
+}
+
+class _SubscriptionScreenState extends State<SubscriptionScreen> {
+  late Future<List<TariffOut>> _futureTariffs;
+
+  @override
+  void initState() {
+    super.initState();
+    _futureTariffs = vpnService.listTariffs(skip: 0, limit: 50);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Subscription')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const Text('Выберите тариф', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Expanded(
+              child: FutureBuilder<List<TariffOut>>(
+                future: _futureTariffs,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Не удалось загрузить тарифы: ${snapshot.error}'),
+                          const SizedBox(height: 8),
+                          ElevatedButton(onPressed: _reload, child: const Text('Повторить')),
+                        ],
+                      ),
+                    );
+                  }
+                  final tariffs = snapshot.data ?? [];
+                  if (tariffs.isEmpty) {
+                    return Center(child: Text('Тарифы не найдены'));
+                  }
+                  return ListView.separated(
+                    itemCount: tariffs.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final t = tariffs[index];
+                      return Card(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 4,
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(t.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                                  Text(t.price, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(t.description),
+                              const SizedBox(height: 8),
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.end,
+                                children: [
+                                  ElevatedButton(
+                                    onPressed: () => _onBuy(context, t),
+                                    child: const Text('Купить'),
+                                  ),
+                                ],
+                              )
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text('При нажатии "Купить" в будущем откроется телеграм-бот для оформления покупки. Сейчас — заглушка.', style: TextStyle(color: Colors.grey[700])),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _reload() {
+    setState(() {
+      _futureTariffs = vpnService.listTariffs(skip: 0, limit: 50);
+    });
+  }
+
+  void _onBuy(BuildContext context, TariffOut tariff) {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Покупка'),
+        content: Text('В будущем будет открыт телеграм-бот для оформления подписки "${tariff.name}" (${tariff.price}).\n\nЭто заглушка.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Отмена')),
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Открытие телеграм-бота для ${tariff.name} — заглушка')));
+            },
+            child: const Text('Ок'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // Новый экран авторизации на основе flutter_login
 class AuthScreen extends StatelessWidget {
   const AuthScreen({super.key});
 
-  Duration get loginTime => const Duration(milliseconds: 2250);
-
   Future<String?> _authUser(LoginData data) async {
     final email = data.name.trim();
     final password = data.password;
     try {
       await vpnService.login(email, password);
-      return null; // success
+      return null;
     } catch (e) {
-      // отдаём сообщение flutter_login для отображения
       return mapErrorToMessage(e);
     }
   }
@@ -744,18 +889,18 @@ class AuthScreen extends StatelessWidget {
     final password = data.password ?? '';
     try {
       await vpnService.register(email, password);
-      // попытка авто-входа
       try {
         await vpnService.login(email, password);
         return null;
-      } catch (le) {
+      } catch (_) {
         return 'Регистрация успешна, но автоматический вход не выполнен.';
       }
     } catch (e) {
       final parsed = parseFieldErrors(e);
       if (parsed.isNotEmpty) {
-        // предпочитаем показывать ошибку поля email если есть
-        final em = parsed['email']?.first ?? parsed['_form']?.first;
+        String? em;
+        if (parsed['email'] != null && parsed['email']!.isNotEmpty) em = parsed['email']!.first;
+        else if (parsed['_form'] != null && parsed['_form']!.isNotEmpty) em = parsed['_form']!.first;
         return em ?? mapErrorToMessage(e);
       }
       return mapErrorToMessage(e);
@@ -763,13 +908,14 @@ class AuthScreen extends StatelessWidget {
   }
 
   Future<String?> _recoverPassword(String name) async {
-    // В проекте нет endpoint для восстановления — пока заглушка
+    // Заглушка — в API нет реализации восстановления
     return 'Функция восстановления пароля не реализована.';
   }
 
   @override
   Widget build(BuildContext context) {
     return FlutterLogin(
+      key: const Key('login-screen'), // <- добавили ключ для теста
       title: 'VPN',
       onLogin: _authUser,
       onSignup: _signupUser,
@@ -785,7 +931,7 @@ class AuthScreen extends StatelessWidget {
         goBackButton: 'go_back'.tr(),
         confirmPasswordError: 'confirm_password_error'.tr(),
         recoverPasswordIntro: 'recover_password'.tr(),
-        recoverPasswordDescription: 'recover_password_description'.tr() ?? '',
+        recoverPasswordDescription: 'recover_password_description'.tr(),
         recoverPasswordSuccess: 'recover_password_success'.tr(),
         flushbarTitleError: 'login_error_title'.tr(),
         flushbarTitleSuccess: 'registration_auto_login_failed'.tr(),
