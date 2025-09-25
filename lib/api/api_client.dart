@@ -141,7 +141,9 @@ class ApiClient {
   void _validateParams(Map<String, String>? params) {
     if (params == null) return;
     for (final entry in params.entries) {
-      if (entry.key == null || entry.value == null) throw ArgumentError('Query params must not contain nulls');
+      // В Dart с null-safety ключи/значения в Map<String, String> не могут быть null.
+      // Раньше тут была проверка на null — удаляем её.
+      if (entry.key.isEmpty || entry.value.isEmpty) throw ArgumentError('Query params must not contain empty keys/values');
     }
   }
 
@@ -232,16 +234,16 @@ class ApiClient {
 
   String _mask(String token) {
     if (token.length <= 8) return '****';
-    return token.substring(0, 4) + '...' + token.substring(token.length - 4);
+    return '${token.substring(0, 4)}...${token.substring(token.length - 4)}';
   }
 
   String _normalize(String input) {
     // base64url padding
     switch (input.length % 4) {
       case 2:
-        return input + '==';
+        return '$input==';
       case 3:
-        return input + '=';
+        return '$input=';
       default:
         return input;
     }

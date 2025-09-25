@@ -42,13 +42,28 @@ class VpnApp extends StatelessWidget {
   }
 }
 
-class SplashScreen extends StatelessWidget {
+class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
   @override
-  Widget build(BuildContext context) {
+  State<SplashScreen> createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  @override
+  void initState() {
+    super.initState();
     Future.delayed(const Duration(seconds: 1), () {
-      if (!Navigator.canPop(context)) Navigator.pushReplacementNamed(context, '/login');
+      if (!mounted) {
+        return;
+      }
+      if (!Navigator.canPop(context)) {
+        Navigator.pushReplacementNamed(context, '/login');
+      }
     });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Scaffold(body: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)));
   }
 }
@@ -92,7 +107,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final pw = _passwordController.text;
     final emailReg = RegExp(r"^[\w\.-]+@[\w\.-]+\.\w+");
     final can = email.isNotEmpty && emailReg.hasMatch(email) && pw.length >= 8;
-    if (_canSubmit.value != can) _canSubmit.value = can;
+    if (_canSubmit.value != can) {
+      _canSubmit.value = can;
+    }
   }
 
   Future<void> _doRegister() async {
@@ -116,12 +133,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
       // если регистрация успешна, пробуем авто-вход отдельно
       try {
         await vpnService.login(email, password);
-        if (!mounted) return;
+        if (!mounted) {
+          return;
+        }
         Navigator.pushReplacementNamed(context, '/home');
         return;
       } catch (loginErr) {
         // авто-вход после регистрации не удался — сообщим и предложим перейти на экран входа
         final loginMsg = mapErrorToMessage(loginErr);
+        if (!mounted) {
+          return;
+        }
         await showDialog<void>(
           context: context,
           builder: (ctx) => AlertDialog(
@@ -153,6 +175,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(summary)));
         final emailErrors = parsed['email'] ?? parsed['Email'] ?? parsed['e-mail'];
         if (emailErrors != null && emailErrors.any((m) => m.toLowerCase().contains('email уже зарегистрирован') || m.toLowerCase().contains('already'))) {
+          if (!mounted) {
+            return;
+          }
           await showDialog<void>(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -176,7 +201,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -277,7 +304,9 @@ class _LoginScreenState extends State<LoginScreen> {
     final pw = _passwordController.text;
     final emailReg = RegExp(r"^[\w\.-]+@[\w\.-]+\.\w+");
     final can = email.isNotEmpty && emailReg.hasMatch(email) && pw.length >= 8;
-    if (_canSubmit.value != can) _canSubmit.value = can;
+    if (_canSubmit.value != can) {
+      _canSubmit.value = can;
+    }
   }
 
   Future<void> _doLogin() async {
@@ -297,10 +326,14 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = true);
     try {
       await vpnService.login(email, password);
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       Navigator.pushReplacementNamed(context, '/home');
     } catch (e) {
-      if (!mounted) return;
+      if (!mounted) {
+        return;
+      }
       final parsed = parseFieldErrors(e);
       if (parsed.isNotEmpty) {
         setState(() {
@@ -337,7 +370,9 @@ class _LoginScreenState extends State<LoginScreen> {
         );
       }
     } finally {
-      if (mounted) setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
@@ -676,7 +711,7 @@ class HomeScreenState extends State<HomeScreen> {
                                               _selectedApps[app.name] = val;
                                             });
                                           },
-                                          activeColor: Color(0xFF6366F1),
+                                          activeThumbColor: Color(0xFF6366F1),
                                         ),
                                       );
                                     },
@@ -737,7 +772,9 @@ class HomeScreenState extends State<HomeScreen> {
     }
 
     // Навигация: очистить стек и показать экран логина
-    if (!mounted) return;
+    if (!mounted) {
+      return;
+    }
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 }
@@ -899,8 +936,11 @@ class AuthScreen extends StatelessWidget {
       final parsed = parseFieldErrors(e);
       if (parsed.isNotEmpty) {
         String? em;
-        if (parsed['email'] != null && parsed['email']!.isNotEmpty) em = parsed['email']!.first;
-        else if (parsed['_form'] != null && parsed['_form']!.isNotEmpty) em = parsed['_form']!.first;
+        if (parsed['email'] != null && parsed['email']!.isNotEmpty) {
+          em = parsed['email']!.first;
+        } else if (parsed['_form'] != null && parsed['_form']!.isNotEmpty) {
+          em = parsed['_form']!.first;
+        }
         return em ?? mapErrorToMessage(e);
       }
       return mapErrorToMessage(e);
