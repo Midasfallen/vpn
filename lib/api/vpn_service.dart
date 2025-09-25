@@ -40,4 +40,15 @@ class VpnService {
     final res = await api.get<List<dynamic>>('/vpn_peers/', (json) => json as List<dynamic>, params: params);
     return res.map((e) => VpnPeerOut.fromJson(e as Map<String, dynamic>)).toList();
   }
+
+  Future<VpnPeerOut> createPeer() async {
+    // Создаёт новый peer для текущего пользователя
+    final res = await api.post<Map<String, dynamic>>('/vpn_peers', {}, (json) => json as Map<String, dynamic>);
+    return VpnPeerOut.fromJson(res);
+  }
+
+  Future<VpnPeerOut> getPeer(int peerId) async {
+    final res = await api.get<Map<String, dynamic>>('/vpn_peers/$peerId', (json) => json as Map<String, dynamic>);
+    return VpnPeerOut.fromJson(res);
+  }
 }
