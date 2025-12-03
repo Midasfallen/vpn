@@ -92,7 +92,7 @@ class _PasswordFieldState extends State<PasswordField> {
       obscureText: _obscure,
       decoration: InputDecoration(
         errorText: widget.errorText,
-        labelText: 'Пароль',
+        labelText: 'password_label'.tr(),
         prefixIcon: Icon(Icons.lock_outline),
         suffixIcon: IconButton(
           icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
@@ -170,7 +170,7 @@ class HomeScreenState extends State<HomeScreen> {
       setState(() {
         _connected = false;
       });
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('VPN отключен')));
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('vpn_disconnected'.tr())));
       return;
     }
 
@@ -199,7 +199,7 @@ class HomeScreenState extends State<HomeScreen> {
       });
 
       final statusText = peerInfo.active ? 'active' : 'inactive';
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('VPN подключен: $statusText')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('vpn_connected'.tr(args: [statusText]))));
     } catch (e) {
       setState(() {
         _connected = false;
@@ -212,15 +212,15 @@ class HomeScreenState extends State<HomeScreen> {
   String _getStatusText() {
     final now = DateTime.now();
     if (_hasActiveSubscription && _subscriptionEnd.isAfter(now)) {
-      return 'Подписка активна до ${_formatDate(_subscriptionEnd)}';
+      return 'subscription_active_until'.tr(args: [_formatDate(_subscriptionEnd)]);
     } else if (_hasTrial && _trialEnd.isAfter(now)) {
-      return 'Пробный период до ${_formatDate(_trialEnd)}';
+      return 'trial_until'.tr(args: [_formatDate(_trialEnd)]);
     } else if (_hasActiveSubscription && _subscriptionEnd.isBefore(now)) {
-      return 'Подписка истекла';
+      return 'subscription_expired'.tr();
     } else if (_hasTrial && _trialEnd.isBefore(now)) {
-      return 'Пробный период завершён';
+      return 'trial_expired'.tr();
     } else {
-      return 'Нет активной подписки';
+      return 'no_active_subscription'.tr();
     }
   }
 
@@ -309,7 +309,7 @@ class HomeScreenState extends State<HomeScreen> {
                     children: [
                       Icon(Icons.shopping_cart, size: 24),
                       SizedBox(width: 10),
-                      Text('Купить подписку'),
+                      Text('buy_subscription'.tr()),
                     ],
                   ),
                 ),
@@ -359,9 +359,9 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                   onPressed: () {
                     // Заглушка: позже реализуем platform channel для открытия системного окна Android
-                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Выбор приложений — заглушка')));
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('select_apps_stub'.tr())));
                   },
-                  label: Text('Выбрать приложения'),
+                  label: Text('select_apps'.tr()),
                 ),
               ),
             ],
@@ -375,7 +375,7 @@ class HomeScreenState extends State<HomeScreen> {
         child: OutlinedButton.icon(
           key: const Key('logout-button'),
           icon: Icon(Icons.logout),
-          label: Text('Выйти из профиля'),
+          label: Text('logout'.tr()),
           style: OutlinedButton.styleFrom(
             foregroundColor: Color(0xFFEF4444),
             textStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -525,7 +525,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Покупка'),
+        title: Text('purchase_title'.tr()),
         content: Text('В будущем будет открыт телеграм-бот для оформления подписки "${tariff.name}" (${tariff.price}).\n\nЭто заглушка.'),
         actions: [
           TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Отмена')),
