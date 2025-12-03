@@ -86,6 +86,9 @@ String mapErrorToMessage(Object e) {
       if (s.toLowerCase().contains('socket') || s.toLowerCase().contains('socketexception')) {
         return 'network_error'.tr();
       }
+      if (s.toLowerCase().contains('timeout') || s.toLowerCase().contains('timeoutexception')) {
+        return 'timeout_error'.tr();
+      }
       return '${'server_error'.tr()}: $s';
     }
   } catch (_) {}

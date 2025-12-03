@@ -17,10 +17,14 @@ import 'logging.dart';
 ///   callback вернул токен — запрос повторяется единожды.
 /// - Mapper должен принимать распарсенный JSON (Map/List) или null/строку,
 ///   ApiClient обрабатывает пустые тела и некорректный JSON.
+/// - Timeout для каждого запроса (30 сек по умолчанию).
 class ApiClient {
   final String baseUrl;
   final http.Client httpClient;
   String? _token;
+  
+  /// Timeout для HTTP запросов
+  static const Duration requestTimeout = Duration(seconds: 30);
 
   /// Callback для обновления токена — обязан возвращать новый токен или null.
   /// Обычно реализуется в слое авторизации (VpnService) и сохраняет токен в безопасном хранилище.
@@ -90,7 +94,10 @@ class ApiClient {
     final uri = Uri.parse(baseUrl + path).replace(queryParameters: params);
     ApiLogger.debug('GET $uri', {'headers': _headers()});
 
-    return _requestWithRefreshAndRetry<T>(() => httpClient.get(uri, headers: _headers()), mapper);
+    return _requestWithRefreshAndRetry<T>(
+      () => httpClient.get(uri, headers: _headers()).timeout(requestTimeout),
+      mapper,
+    );
   }
 
   Future<T> post<T>(String path, dynamic body, T Function(dynamic json) mapper, {Map<String, String>? params}) async {
@@ -103,14 +110,18 @@ class ApiClient {
     ApiLogger.debug('POST $uri', {'body': body, 'headers': _headers()});
 
     // Выполняем запрос и вручную обрабатываем возможный редирект (например, 307 -> location)
-    http.Response res = await _withRetry(() => httpClient.post(uri, headers: _headers(), body: jsonEncode(body)));
+    http.Response res = await _withRetry(
+      () => httpClient.post(uri, headers: _headers(), body: jsonEncode(body)).timeout(requestTimeout),
+    );
 
     if (res.statusCode >= 300 && res.statusCode < 400 && res.headers['location'] != null) {
       try {
         final loc = res.headers['location']!;
         final redirectUri = Uri.parse(loc);
         ApiLogger.info('Following redirect for POST to $redirectUri');
-        res = await _withRetry(() => httpClient.post(redirectUri, headers: _headers(), body: jsonEncode(body)));
+        res = await _withRetry(
+          () => httpClient.post(redirectUri, headers: _headers(), body: jsonEncode(body)).timeout(requestTimeout),
+        );
       } catch (e) {
         ApiLogger.error('Failed to follow redirect', e);
       }
@@ -127,7 +138,10 @@ class ApiClient {
     final uri = Uri.parse(baseUrl + path);
     ApiLogger.debug('PUT $uri', {'body': body, 'headers': _headers()});
 
-    return _requestWithRefreshAndRetry<T>(() => httpClient.put(uri, headers: _headers(), body: jsonEncode(body)), mapper);
+    return _requestWithRefreshAndRetry<T>(
+      () => httpClient.put(uri, headers: _headers(), body: jsonEncode(body)).timeout(requestTimeout),
+      mapper,
+    );
   }
 
   Future<T> delete<T>(String path, T Function(dynamic json) mapper) async {
@@ -137,7 +151,10 @@ class ApiClient {
     final uri = Uri.parse(baseUrl + path);
     ApiLogger.debug('DELETE $uri', {'headers': _headers()});
 
-    return _requestWithRefreshAndRetry<T>(() => httpClient.delete(uri, headers: _headers()), mapper);
+    return _requestWithRefreshAndRetry<T>(
+      () => httpClient.delete(uri, headers: _headers()).timeout(requestTimeout),
+      mapper,
+    );
   }
 
   // --- Внутренние утилиты ---

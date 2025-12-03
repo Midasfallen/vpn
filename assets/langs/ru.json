@@ -31,5 +31,6 @@
   "success": "Успешно",
   "network_error": "Network error. Please check your internet connection.",
   "subscription_expired": "Ваша подписка истекла. Пожалуйста, обновите подписку.",
-  "offline_mode": "Вы в режиме оффлайн"
+  "offline_mode": "Вы в режиме оффлайн",
+  "timeout_error": "Время ожидания истекло. Проверьте интернет-соединение."
 }
