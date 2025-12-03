@@ -21,5 +21,6 @@
   "recover_password_success": "Recovery email sent.",
   "go_back": "Go back",
   "network_error": "Network error. Please check your internet connection.",
-  "subscription_expired": "Your subscription has expired. Please renew your subscription."
+  "subscription_expired": "Your subscription has expired. Please renew your subscription.",
+  "offline_mode": "You are in offline mode"
 }

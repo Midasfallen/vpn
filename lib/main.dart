@@ -5,6 +5,7 @@ import 'api/client_instance.dart';
 import 'api/error_mapper.dart';
 import 'api/models.dart';
 import 'api/token_storage.dart';
+import 'api/connectivity_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -116,6 +117,7 @@ class HomeScreen extends StatefulWidget {
 
 class HomeScreenState extends State<HomeScreen> {
   bool _connected = false;
+  bool _isOnline = true;
   final bool _hasActiveSubscription = false;
   final bool _hasTrial = true;
   final DateTime _subscriptionEnd = DateTime.now().add(Duration(days: 10));
@@ -126,6 +128,30 @@ class HomeScreenState extends State<HomeScreen> {
     super.initState();
     // Попытаться найти существующий peer у пользователя
     _loadPeer();
+    // Слушаем изменения подключения к интернету
+    connectivityService.addListener(_onConnectivityChanged);
+    _checkConnectivity();
+  }
+
+  @override
+  void dispose() {
+    connectivityService.removeListener(_onConnectivityChanged);
+    super.dispose();
+  }
+
+  void _onConnectivityChanged() {
+    setState(() {
+      _isOnline = connectivityService.isOnline;
+    });
+  }
+
+  Future<void> _checkConnectivity() async {
+    final isOnline = await connectivityService.hasConnection();
+    if (mounted) {
+      setState(() {
+        _isOnline = isOnline;
+      });
+    }
   }
 
   Future<void> _loadPeer() async {
@@ -218,11 +244,29 @@ class HomeScreenState extends State<HomeScreen> {
         title: null,
       ),
       body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+        child: Column(
+          children: [
+            // Offline banner
+            if (!_isOnline)
+              Container(
+                color: Colors.amber,
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+                child: Row(
+                  children: [
+                    Icon(Icons.wifi_off, size: 20, color: Colors.black),
+                    const SizedBox(width: 8),
+                    Text(
+                      'offline_mode'.tr(),
+                      style: TextStyle(fontSize: 14, color: Colors.black, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
               Card(
                 elevation: 0,
                 color: _isExpired()
@@ -322,6 +366,8 @@ class HomeScreenState extends State<HomeScreen> {
               ),
             ],
           ),
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: Padding(
