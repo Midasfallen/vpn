@@ -56,8 +56,9 @@ class VpnPeerOut {
   final String? allowedIps;
   final bool active;
   final String createdAt;
+  final String? wgPrivateKey; // returned once on creation
 
-  VpnPeerOut({required this.id, required this.userId, required this.wgPublicKey, required this.wgIp, this.allowedIps, required this.active, required this.createdAt});
+  VpnPeerOut({required this.id, required this.userId, required this.wgPublicKey, required this.wgIp, this.allowedIps, required this.active, required this.createdAt, this.wgPrivateKey});
 
   factory VpnPeerOut.fromJson(Map<String, dynamic> json) => VpnPeerOut(
     id: json['id'] as int,
@@ -67,5 +68,6 @@ class VpnPeerOut {
     allowedIps: json['allowed_ips']?.toString(),
     active: json['active'] as bool,
     createdAt: json['created_at'] as String,
+    wgPrivateKey: json['wg_private_key']?.toString(),
   );
 }

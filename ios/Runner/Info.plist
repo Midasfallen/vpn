@@ -45,5 +45,14 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<!-- VPN Permissions -->
+	<key>NEVPNStatusDidChangeNotification</key>
+	<true/>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>This app needs access to your local network to configure VPN settings.</string>
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_vpn._tcp</string>
+	</array>
 </dict>
 </plist>

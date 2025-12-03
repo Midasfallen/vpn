@@ -19,6 +19,16 @@ String mapErrorToMessage(Object e) {
       // 401 Unauthorized
       if (status == 401) return 'invalid_credentials'.tr();
 
+      // 403 Forbidden — например, подписка истекла
+      if (status == 403) {
+        try {
+          if (parsed is Map && parsed['detail'] is String) {
+            return parsed['detail'].toString();
+          }
+        } catch (_) {}
+        return 'subscription_expired'.tr();
+      }
+
       // 422 Unprocessable Entity — часто ошибки валидации (FastAPI)
       if (status == 422) {
         // parsed может быть объектом с полем detail: [ {"loc": [...], "msg": "..."}, ... ]

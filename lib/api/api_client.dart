@@ -99,10 +99,24 @@ class ApiClient {
     _validateParams(params);
     if (body == null) throw ArgumentError.notNull('body');
 
-    final uri = Uri.parse(baseUrl + path).replace(queryParameters: params);
+    Uri uri = Uri.parse(baseUrl + path).replace(queryParameters: params);
     ApiLogger.debug('POST $uri', {'body': body, 'headers': _headers()});
 
-    return _requestWithRefreshAndRetry<T>(() => httpClient.post(uri, headers: _headers(), body: jsonEncode(body)), mapper);
+    // Выполняем запрос и вручную обрабатываем возможный редирект (например, 307 -> location)
+    http.Response res = await _withRetry(() => httpClient.post(uri, headers: _headers(), body: jsonEncode(body)));
+
+    if (res.statusCode >= 300 && res.statusCode < 400 && res.headers['location'] != null) {
+      try {
+        final loc = res.headers['location']!;
+        final redirectUri = Uri.parse(loc);
+        ApiLogger.info('Following redirect for POST to $redirectUri');
+        res = await _withRetry(() => httpClient.post(redirectUri, headers: _headers(), body: jsonEncode(body)));
+      } catch (e) {
+        ApiLogger.error('Failed to follow redirect', e);
+      }
+    }
+
+    return _process<T>(res, mapper);
   }
 
   Future<T> put<T>(String path, dynamic body, T Function(dynamic json) mapper) async {
@@ -228,7 +242,7 @@ class ApiClient {
       }
     }
 
-    ApiLogger.error('API returned error', 'status:${res.statusCode} body:${res.body}', StackTrace.current);
+    ApiLogger.error('API returned error', {'status': res.statusCode, 'body': res.body, 'headers': res.headers}, StackTrace.current);
     throw ApiException(res.statusCode, res.body);
   }
 

@@ -1,3 +1,5 @@
+// ignore_for_file: avoid_print, unnecessary_brace_in_string_interps, unused_import
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -7,4 +9,3 @@ void main() {
     expect(find.text('ok'), findsOneWidget);
   });
 }
-

@@ -29,5 +29,6 @@
   "subscription_success": "Тариф \"{plan}\" активирован.",
   "buy": "Купить",
   "success": "Успешно",
-  "network_error": "Network error. Please check your internet connection."
+  "network_error": "Network error. Please check your internet connection.",
+  "subscription_expired": "Ваша подписка истекла. Пожалуйста, обновите подписку."
 }

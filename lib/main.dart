@@ -27,14 +27,16 @@ class VpnApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'VPN App',
-      theme: ThemeData(primarySwatch: Colors.indigo),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.indigo),
+      ),
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,
       locale: context.locale,
       home: const SplashScreen(),
       routes: {
-        '/login': (_) => const AuthScreen(key: Key('login-screen')), // <- вот так
-        '/register': (_) => const RegisterScreen(),
+        '/login': (_) => const AuthScreen(key: Key('login-screen')),
         '/home': (_) => const HomeScreen(),
         '/subscription': (_) => const SubscriptionScreen(),
       },
@@ -65,375 +67,6 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(body: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)));
-  }
-}
-
-// -------------------- RegisterScreen --------------------
-class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key});
-  @override
-  State<RegisterScreen> createState() => _RegisterScreenState();
-}
-
-class _RegisterScreenState extends State<RegisterScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  final Map<String, List<String>> _fieldErrors = {};
-  String? _formError;
-  bool _isLoading = false;
-  final ValueNotifier<bool> _canSubmit = ValueNotifier(false);
-
-  @override
-  void initState() {
-    super.initState();
-    _emailController.addListener(_updateCanSubmit);
-    _passwordController.addListener(_updateCanSubmit);
-    _updateCanSubmit();
-  }
-
-  @override
-  void dispose() {
-    _canSubmit.dispose();
-    _emailController.removeListener(_updateCanSubmit);
-    _passwordController.removeListener(_updateCanSubmit);
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  void _updateCanSubmit() {
-    final email = _emailController.text.trim();
-    final pw = _passwordController.text;
-    final emailReg = RegExp(r"^[\w\.-]+@[\w\.-]+\.\w+");
-    final can = email.isNotEmpty && emailReg.hasMatch(email) && pw.length >= 8;
-    if (_canSubmit.value != can) {
-      _canSubmit.value = can;
-    }
-  }
-
-  Future<void> _doRegister() async {
-    setState(() {
-      _fieldErrors.clear();
-      _formError = null;
-    });
-
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Пожалуйста, исправьте ошибки в форме')));
-      return;
-    }
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    setState(() => _isLoading = true);
-    try {
-      // попытка зарегистрировать
-      await vpnService.register(email, password);
-      // если регистрация успешна, пробуем авто-вход отдельно
-      try {
-        await vpnService.login(email, password);
-        if (!mounted) {
-          return;
-        }
-        Navigator.pushReplacementNamed(context, '/home');
-        return;
-      } catch (loginErr) {
-        // авто-вход после регистрации не удался — сообщим и предложим перейти на экран входа
-        final loginMsg = mapErrorToMessage(loginErr);
-        if (!mounted) {
-          return;
-        }
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(tr('login_error_title')),
-            content: Text('${tr('registration_auto_login_failed')}\n$loginMsg'),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('ok'))),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  Navigator.pushReplacementNamed(context, '/login');
-                },
-                child: Text(tr('yes')),
-              ),
-            ],
-          ),
-        );
-        return;
-      }
-    } catch (e) {
-      if (!mounted) return;
-      final parsed = parseFieldErrors(e);
-      if (parsed.isNotEmpty) {
-        setState(() {
-          _fieldErrors.addAll(parsed);
-          _formError = _fieldErrors['_form']?.join('\n');
-        });
-        final summary = _fieldErrors.entries.expand((kv) => kv.value.map((m) => kv.key == '_form' ? m : '${kv.key}: $m')).join('\n');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(summary)));
-        final emailErrors = parsed['email'] ?? parsed['Email'] ?? parsed['e-mail'];
-        if (emailErrors != null && emailErrors.any((m) => m.toLowerCase().contains('email уже зарегистрирован') || m.toLowerCase().contains('already'))) {
-          if (!mounted) {
-            return;
-          }
-          await showDialog<void>(
-            context: context,
-            builder: (ctx) => AlertDialog(
-              title: Text(tr('email_already_registered')),
-              content: Text(tr('email_registered_prompt')),
-              actions: [
-                TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('no'))),
-                TextButton(
-                  onPressed: () {
-                    Navigator.of(ctx).pop();
-                    Navigator.pushReplacementNamed(context, '/login');
-                  },
-                  child: Text(tr('yes')),
-                ),
-              ],
-            ),
-          );
-        }
-      } else {
-        final msg = mapErrorToMessage(e);
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Регистрация')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(labelText: 'Email', errorText: _fieldErrors['email']?.first),
-                validator: (v) {
-                  final s = (v ?? '').trim();
-                  if (s.isEmpty) return 'Введите email';
-                  final emailReg = RegExp(r"^[\w\.-]+@[\w\.-]+\.\w+");
-                  if (!emailReg.hasMatch(s)) return 'Введите корректный email';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              PasswordField(
-                controller: _passwordController,
-                errorText: _fieldErrors['password']?.first,
-                validator: (v) {
-                  final s = v ?? '';
-                  if (s.isEmpty) return 'Введите пароль';
-                  if (s.length < 8) return 'Пароль должен быть не менее 8 символов';
-                  return null;
-                },
-              ),
-              if (_formError != null) ...[
-                const SizedBox(height: 12),
-                Text(_formError!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
-              ],
-              const SizedBox(height: 20),
-              ValueListenableBuilder<bool>(
-                valueListenable: _canSubmit,
-                builder: (_, can, __) => ElevatedButton(
-                  onPressed: (_isLoading || !can) ? null : _doRegister,
-                  child: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator()) : const Text('Зарегистрироваться'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(onPressed: () => Navigator.pushReplacementNamed(context, '/login'), child: const Text('Уже есть аккаунт? Войти')),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// -------------------- LoginScreen --------------------
-class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key});
-  @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _formKey = GlobalKey<FormState>();
-  final Map<String, List<String>> _fieldErrors = {};
-  String? _formError;
-  bool _isLoading = false;
-  final ValueNotifier<bool> _canSubmit = ValueNotifier(false);
-
-  @override
-  void initState() {
-    super.initState();
-    _emailController.addListener(_updateCanSubmit);
-    _passwordController.addListener(_updateCanSubmit);
-    _updateCanSubmit();
-  }
-
-  @override
-  void dispose() {
-    _canSubmit.dispose();
-    _emailController.removeListener(_updateCanSubmit);
-    _passwordController.removeListener(_updateCanSubmit);
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  void _updateCanSubmit() {
-    final email = _emailController.text.trim();
-    final pw = _passwordController.text;
-    final emailReg = RegExp(r"^[\w\.-]+@[\w\.-]+\.\w+");
-    final can = email.isNotEmpty && emailReg.hasMatch(email) && pw.length >= 8;
-    if (_canSubmit.value != can) {
-      _canSubmit.value = can;
-    }
-  }
-
-  Future<void> _doLogin() async {
-    setState(() {
-      _fieldErrors.clear();
-      _formError = null;
-    });
-
-    if (!(_formKey.currentState?.validate() ?? false)) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Пожалуйста, исправьте ошибки в форме')));
-      return;
-    }
-
-    final email = _emailController.text.trim();
-    final password = _passwordController.text;
-
-    setState(() => _isLoading = true);
-    try {
-      await vpnService.login(email, password);
-      if (!mounted) {
-        return;
-      }
-      Navigator.pushReplacementNamed(context, '/home');
-    } catch (e) {
-      if (!mounted) {
-        return;
-      }
-      final parsed = parseFieldErrors(e);
-      if (parsed.isNotEmpty) {
-        setState(() {
-          _fieldErrors.addAll(parsed);
-          _formError = _fieldErrors['_form']?.join('\n');
-        });
-        final summary = _fieldErrors.entries
-            .expand((kv) => kv.value.map((m) => kv.key == '_form' ? m : '${kv.key}: $m'))
-            .join('\n');
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(summary)));
-        return;
-      }
-
-      final msg = mapErrorToMessage(e);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
-      // Предложить восстановление пароля при неверных учетных данных
-      if (msg.toLowerCase().contains('неверный') || msg.toLowerCase().contains('логин') || msg.toLowerCase().contains('пароль')) {
-        await showDialog<void>(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text(tr('login_error_title')),
-            content: Text('${tr('invalid_credentials')} ${tr('recover_password')}?'),
-            actions: [
-              TextButton(onPressed: () => Navigator.of(ctx).pop(), child: Text(tr('cancel'))),
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(tr('recover_password'))));
-                },
-                child: Text(tr('recover_password')),
-              ),
-            ],
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Вход')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
-        child: Form(
-          key: _formKey,
-          autovalidateMode: AutovalidateMode.onUserInteraction,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 8),
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: InputDecoration(labelText: 'Email', errorText: _fieldErrors['email']?.first),
-                validator: (v) {
-                  final s = (v ?? '').trim();
-                  if (s.isEmpty) return 'Введите email';
-                  final emailReg = RegExp(r"^[\w\.-]+@[\w\.-]+\.\w+");
-                  if (!emailReg.hasMatch(s)) return 'Введите корректный email';
-                  return null;
-                },
-              ),
-              const SizedBox(height: 12),
-              PasswordField(
-                controller: _passwordController,
-                errorText: _fieldErrors['password']?.first,
-                validator: (v) {
-                  final s = v ?? '';
-                  if (s.isEmpty) return 'Введите пароль';
-                  if (s.length < 8) return 'Пароль должен быть не менее 8 символов';
-                  return null;
-                },
-              ),
-              if (_formError != null) ...[
-                const SizedBox(height: 12),
-                Text(_formError!, style: const TextStyle(color: Colors.red), textAlign: TextAlign.center),
-              ],
-              const SizedBox(height: 20),
-              ValueListenableBuilder<bool>(
-                valueListenable: _canSubmit,
-                builder: (_, can, __) => ElevatedButton(
-                  onPressed: (_isLoading || !can) ? null : _doLogin,
-                  child: _isLoading ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator()) : const Text('Войти'),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => Navigator.pushReplacementNamed(context, '/register'),
-                child: const Text('Нет аккаунта? Зарегистрироваться'),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }
 
@@ -481,37 +114,73 @@ class HomeScreen extends StatefulWidget {
   HomeScreenState createState() => HomeScreenState();
 }
 
-class _AppInfo {
-  final String name;
-  final IconData icon;
-  _AppInfo(this.name, this.icon);
-}
-
 class HomeScreenState extends State<HomeScreen> {
-  final List<_AppInfo> _apps = [
-    _AppInfo('WhatsApp', Icons.message),
-    _AppInfo('Instagram', Icons.camera_alt),
-    _AppInfo('YouTube', Icons.ondemand_video),
-    _AppInfo('Telegram', Icons.send),
-    _AppInfo('Facebook', Icons.facebook),
-    _AppInfo('TikTok', Icons.music_note),
-    _AppInfo('Gmail', Icons.email),
-    _AppInfo('Chrome', Icons.language),
-    _AppInfo('Spotify', Icons.music_note_outlined),
-    _AppInfo('Twitter', Icons.alternate_email),
-  ];
-
-  final Map<String, bool> _selectedApps = {};
   bool _connected = false;
   final bool _hasActiveSubscription = false;
   final bool _hasTrial = true;
   final DateTime _subscriptionEnd = DateTime.now().add(Duration(days: 10));
   final DateTime _trialEnd = DateTime.now().add(Duration(days: 3));
 
-  void _toggleVpn() {
+  @override
+  void initState() {
+    super.initState();
+    // Попытаться найти существующий peer у пользователя
+    _loadPeer();
+  }
+
+  Future<void> _loadPeer() async {
+    try {
+      final peers = await vpnService.listPeers(skip: 0, limit: 10);
+      if (peers.isNotEmpty) {
+        // We discovered peers but don't auto-connect here; toggling will handle creation/connection.
+      }
+    } catch (_) {
+      // Игнорируем ошибки загрузки peer'ов при старте
+    }
+  }
+
+  Future<void> _toggleVpn() async {
+    if (_connected) {
+      setState(() {
+        _connected = false;
+      });
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('VPN отключен')));
+      return;
+    }
+
     setState(() {
-      _connected = !_connected;
+      _connected = true; // оптимистично
     });
+
+    try {
+      // Проверяем, есть ли peer у пользователя
+      final existing = await vpnService.getUserPeerId();
+      int pid;
+      if (existing == null) {
+        final created = await vpnService.createPeer();
+        pid = created.id;
+      } else {
+        pid = existing;
+      }
+
+      // Подключаем (получаем информацию о peer)
+      final peerInfo = await vpnService.connectPeer(pid);
+
+      // Устанавливаем флаг подключено
+      if (!mounted) return;
+      setState(() {
+        _connected = true;
+      });
+
+      final statusText = peerInfo.active ? 'active' : 'inactive';
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('VPN подключен: $statusText')));
+    } catch (e) {
+      setState(() {
+        _connected = false;
+      });
+      final msg = mapErrorToMessage(e);
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+    }
   }
 
   String _getStatusText() {
@@ -645,87 +314,8 @@ class HomeScreenState extends State<HomeScreen> {
                     textStyle: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
                   ),
                   onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => StatefulBuilder(
-                        builder: (context, setStateDialog) => AlertDialog(
-                          title: Text('Выберите приложения для VPN'),
-                          content: SizedBox(
-                            width: double.maxFinite,
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    TextButton(
-                                      onPressed: () {
-                                        setStateDialog(() {
-                                          for (var app in _apps) {
-                                            _selectedApps[app.name] = true;
-                                          }
-                                        });
-                                        setState(() {
-                                          for (var app in _apps) {
-                                            _selectedApps[app.name] = true;
-                                          }
-                                        });
-                                      },
-                                      child: Text('Включить все'),
-                                    ),
-                                    TextButton(
-                                      onPressed: () {
-                                        setStateDialog(() {
-                                          for (var app in _apps) {
-                                            _selectedApps[app.name] = false;
-                                          }
-                                        });
-                                        setState(() {
-                                          for (var app in _apps) {
-                                            _selectedApps[app.name] = false;
-                                          }
-                                        });
-                                      },
-                                      child: Text('Выключить все'),
-                                    ),
-                                  ],
-                                ),
-                                SizedBox(height: 8),
-                                Expanded(
-                                  child: ListView.builder(
-                                    shrinkWrap: true,
-                                    itemCount: _apps.length,
-                                    itemBuilder: (context, i) {
-                                      final app = _apps[i];
-                                      final enabled = _selectedApps[app.name] ?? true;
-                                      return ListTile(
-                                        leading: Icon(app.icon, color: Color(0xFF6366F1)),
-                                        title: Text(app.name),
-                                        trailing: Switch(
-                                          value: enabled,
-                                          onChanged: (val) {
-                                            setStateDialog(() {
-                                              _selectedApps[app.name] = val;
-                                            });
-                                            setState(() {
-                                              _selectedApps[app.name] = val;
-                                            });
-                                          },
-                                          activeThumbColor: Color(0xFF6366F1),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          actions: [
-                            TextButton(onPressed: () => Navigator.of(context).pop(), child: Text('Готово')),
-                          ],
-                        ),
-                      ),
-                    );
+                    // Заглушка: позже реализуем platform channel для открытия системного окна Android
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Выбор приложений — заглушка')));
                   },
                   label: Text('Выбрать приложения'),
                 ),
@@ -758,10 +348,10 @@ class HomeScreenState extends State<HomeScreen> {
     try {
       // Удаляем токен из безопасного хранилища
       await TokenStorage.deleteToken();
+      await TokenStorage.deleteRefreshToken();
     } catch (e) {
       // Логируем ошибку удаления токена, но не мешаем процессу выхода
-      // ignore: avoid_print
-      print('TokenStorage.deleteToken failed: $e');
+      // Ошибка игнорируется, чтобы не мешать логауту
     }
 
     try {
@@ -928,6 +518,7 @@ class AuthScreen extends StatelessWidget {
       await vpnService.register(email, password);
       try {
         await vpnService.login(email, password);
+        // НЕ создаём peer здесь — только при явном запросе из HomeScreen
         return null;
       } catch (_) {
         return 'Регистрация успешна, но автоматический вход не выполнен.';
