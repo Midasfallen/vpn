@@ -1,8 +1,42 @@
-# VPN Flutter Project — API Client documentation
+# VPN Flutter Project — In-App Purchase Integration & API Client
 
-Краткое описание изменений и инструкции по использованию ApiClient, тестированию и CI.
+Полная документация по интеграции In-App Purchase (IAP) для iOS и Android, API client архитектуре и deployment процессу.
 
-## Что сделано
+## Phase 4: In-App Purchase (IAP) Integration ✅
+
+### Phase 4.1: Backend IAP Webhook ✅
+- **Status**: COMPLETE
+- **Files**: `backend_api/iap_validator.py`, `backend_api/payments.py`, `backend_api/auth.py`
+- **Details**: [PHASE_4_1_IMPLEMENTATION.md](./PHASE_4_1_IMPLEMENTATION.md)
+
+**Реализовано**:
+- ✅ Apple receipt validation via iTunes API
+- ✅ `POST /payments/webhook` endpoint для приёма платежей
+- ✅ `GET /auth/me/subscription` endpoint для получения статуса подписки
+- ✅ Automatic UserTariff creation and subscription lifecycle management
+
+### Phase 4.2: Flutter IAP Client ✅
+- **Status**: COMPLETE
+- **Files**: `lib/api/iap_manager.dart`, `lib/subscription_screen.dart`, `pubspec.yaml`
+- **Details**: [PHASE_4_2_IMPLEMENTATION.md](./PHASE_4_2_IMPLEMENTATION.md)
+
+**Реализовано**:
+- ✅ IapManager singleton для управления IAP lifecycle
+- ✅ Product queries from App Store/Google Play
+- ✅ Purchase handling и receipt transmission
+- ✅ SubscriptionScreen UI с list доступных планов и статусом подписки
+
+### Phase 4.3: Subscription UI (In Progress)
+- **Status**: PLANNED
+- **Focus**: Subscription management, plan upgrades, cancellation
+
+### Phase 4.4: Testing & Deployment (Planned)
+- **Status**: TODO
+- **Focus**: E2E testing, production deployment, monitoring
+
+---
+
+## Что сделано (Phases 1-3)
 - Добавлен централизованный логгер `lib/api/logging.dart` (ApiLogger) для консольного и developer.log логирования.
 - ApiClient (`lib/api/api_client.dart`):
   - Валидация входных параметров (path, mapper, params).
