@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 env:
-  FLUTTER_VERSION: '3.19.0'
+  FLUTTER_VERSION: '3.38.4'
 
 jobs:
   # Stage 1: Quality checks
