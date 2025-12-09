@@ -42,84 +42,12 @@ jobs:
           flags: flutter
           fail_ci_if_error: false
 
-  # Stage 2: Deploy backend
-  deploy-backend:
-    name: Deploy Backend & .env
-    runs-on: ubuntu-latest
-    needs: quality-check
-    if: success()
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Setup SSH Agent
-        uses: webfactory/ssh-agent@v0.8.0
-        with:
-          ssh-private-key: ${{ secrets.PROD_SSH_KEY }}
-          ssh-auth-sock: /tmp/ssh_agent.sock
-        continue-on-error: true
-      
-      - name: Add server to known_hosts
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H 146.103.99.70 >> ~/.ssh/known_hosts 2>/dev/null
-      
-      - name: Transfer .env to server
-        run: |
-          cat > /tmp/.env.upload << 'ENVEOF'
-          ${{ secrets.PROD_ENV_FILE }}
-          ENVEOF
-          
-          scp -o StrictHostKeyChecking=no \
-              -o UserKnownHostsFile=/dev/null \
-              /tmp/.env.upload root@146.103.99.70:/tmp/.env.production.upload
-      
-      - name: Update .env and restart Docker
-        run: |
-          ssh -o StrictHostKeyChecking=no \
-              -o UserKnownHostsFile=/dev/null \
-              root@146.103.99.70 << 'SSHEOF'
-          set -e
-          
-          echo "📦 Moving .env file..."
-          mv /tmp/.env.production.upload /srv/vpn-api/.env.production
-          chmod 600 /srv/vpn-api/.env.production
-          
-          echo "🐳 Restarting Docker services..."
-          cd /srv/vpn-api
-          docker compose up -d --no-deps --build web
-          
-          echo "⏳ Waiting for services to be ready..."
-          sleep 5
-          
-          echo "🔍 Checking health..."
-          curl -sf http://localhost:8000/docs > /dev/null || exit 1
-          echo "✅ Services are healthy!"
-          SSHEOF
-      
-      - name: Final health check
-        run: |
-          echo "🔍 Running final health check..."
-          for i in {1..10}; do
-            if curl -sf http://146.103.99.70:8000/docs > /dev/null 2>&1; then
-              echo "✅ Backend API is responding"
-              exit 0
-            fi
-            echo "Attempt $i/10..."
-            sleep 2
-          done
-          echo "❌ Backend health check failed"
-          exit 1
-      
-      - name: Cleanup
-        if: always()
-        run: rm -f /tmp/.env.upload
-
-  # Stage 3: Build artifacts
+  # Stage 2: Build artifacts
   build-artifacts:
     name: Build Flutter Artifacts
     runs-on: ubuntu-latest
     needs: quality-check
+    if: success()
     
     steps:
       - uses: actions/checkout@v4
@@ -144,34 +72,37 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-  # Stage 4: Notifications
+  # Stage 3: Notifications
   notify:
     name: Deployment Summary
     runs-on: ubuntu-latest
-    needs: [quality-check, deploy-backend, build-artifacts]
+    needs: [quality-check, build-artifacts]
     if: always()
     
     steps:
       - name: Print summary
         run: |
           echo "================================"
-          echo "🚀 Deployment Pipeline Summary"
+          echo "🚀 Build Pipeline Summary"
           echo "================================"
           echo "✅ Quality Checks: ${{ needs.quality-check.result }}"
-          echo "✅ Backend Deploy: ${{ needs.deploy-backend.result }}"
           echo "✅ Build Artifacts: ${{ needs.build-artifacts.result }}"
           echo "================================"
           
-          BACKEND_STATUS="${{ needs.deploy-backend.result }}"
+          QUALITY_STATUS="${{ needs.quality-check.result }}"
+          BUILD_STATUS="${{ needs.build-artifacts.result }}"
           
-          if [ "$BACKEND_STATUS" = "success" ]; then
-            echo "✅ DEPLOYMENT SUCCESSFUL!"
-            echo "🌐 API: http://146.103.99.70:8000"
-            echo "📚 Docs: http://146.103.99.70:8000/docs"
-          elif [ "$BACKEND_STATUS" = "skipped" ] || [ "$BACKEND_STATUS" = "failure" ]; then
-            echo "⏭️  Backend deployment skipped or failed (may need SSH secrets)"
-            echo "✅ Code quality and tests passed!"
+          if [ "$QUALITY_STATUS" = "success" ] && [ "$BUILD_STATUS" = "success" ]; then
+            echo "✅ BUILD SUCCESSFUL!"
+            echo "📱 APK ready in artifacts"
           else
-            echo "❌ DEPLOYMENT FAILED!"
+            echo "❌ BUILD FAILED!"
             exit 1
           fi
+          
+          echo ""
+          echo "ℹ️  Backend deployment:"
+          echo "   Push changes to https://github.com/Midasfallen/vpn-api"
+          echo "   Backend updates manually with:"
+          echo "   type .\.env.production | ssh root@146.103.99.70 'cat > /tmp/.env.production.upload'"
+          echo "   ssh root@146.103.99.70 'mv /tmp/.env.production.upload /srv/vpn-api/.env.production && chmod 600 /srv/vpn-api/.env.production && cd /srv/vpn-api && docker compose up -d --no-deps --build web'"
