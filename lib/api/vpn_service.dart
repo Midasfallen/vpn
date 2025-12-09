@@ -142,4 +142,97 @@ class VpnService {
 
     throw Exception('No wg_quick or key fields in response from config endpoints');
   }
+
+  // === Payment & IAP Methods ===
+
+  /// Получить текущую активную подписку пользователя
+  Future<UserSubscriptionOut?> getActiveSubscription() async {
+    try {
+      final res = await api.get<Map<String, dynamic>>('/auth/me/subscription', (json) => json as Map<String, dynamic>);
+      return UserSubscriptionOut.fromJson(res);
+    } on ApiException catch (e) {
+      if (e.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  /// Список платежей текущего пользователя
+  Future<List<PaymentOut>> listPayments({int skip = 0, int limit = 50}) async {
+    final params = <String, String>{'skip': skip.toString(), 'limit': limit.toString()};
+    final res = await api.get<List<dynamic>>('/payments/', (json) => json as List<dynamic>, params: params);
+    return res.map((e) => PaymentOut.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  /// Проверить и активировать IAP платёж (Apple/Google)
+  /// 
+  /// Отправляет receipt на бэкенд для верификации.
+  /// На успех: создаёт Payment, активирует подписку, возвращает объект с деталями.
+  Future<IapReceiptVerificationResponse> verifyIapReceipt({
+    required String receipt,
+    required String provider, // 'apple' or 'google'
+    String? packageName,
+    String? productId,
+  }) async {
+    final req = IapReceiptVerificationRequest(
+      receipt: receipt,
+      provider: provider,
+      packageName: packageName,
+      productId: productId,
+    );
+
+    final res = await api.post<Map<String, dynamic>>(
+      '/payments/iap_verify',
+      req.toJson(),
+      (json) => json as Map<String, dynamic>,
+    );
+
+    return IapReceiptVerificationResponse.fromJson(res);
+  }
+
+  /// Создать платёж вручную (для админа или других провайдеров)
+  Future<PaymentOut> createPayment({
+    required String amount,
+    required String currency,
+    required String status,
+    String? provider,
+    String? providerPaymentId,
+    int? userId,
+  }) async {
+    final body = <String, dynamic>{
+      'amount': amount,
+      'currency': currency,
+      'status': status,
+      if (provider != null) 'provider': provider,
+      if (providerPaymentId != null) 'provider_payment_id': providerPaymentId,
+      if (userId != null) 'user_id': userId,
+    };
+
+    final res = await api.post<Map<String, dynamic>>(
+      '/payments/',
+      body,
+      (json) => json as Map<String, dynamic>,
+    );
+
+    return PaymentOut.fromJson(res);
+  }
+
+  /// Получить деталь платежа
+  Future<PaymentOut> getPayment(int paymentId) async {
+    final res = await api.get<Map<String, dynamic>>(
+      '/payments/$paymentId/',
+      (json) => json as Map<String, dynamic>,
+    );
+    return PaymentOut.fromJson(res);
+  }
+
+  /// Обновить статус платежа (например, на 'completed' после верификации)
+  Future<PaymentOut> updatePaymentStatus(int paymentId, String newStatus) async {
+    final body = {'status': newStatus};
+    final res = await api.put<Map<String, dynamic>>(
+      '/payments/$paymentId/',
+      body,
+      (json) => json as Map<String, dynamic>,
+    );
+    return PaymentOut.fromJson(res);
+  }
 }

@@ -43,5 +43,15 @@
   "select_apps": "Выбрать приложения",
   "select_apps_stub": "Выбор приложений — заглушка",
   "buy_subscription": "Купить подписку",
-  "logout": "Выйти из профиля"
+  "logout": "Выйти из профиля",
+  "subscription": "Подписка",
+  "error": "Ошибка",
+  "retry": "Повторить",
+  "no_tariffs_available": "Нет доступных тарифов",
+  "subscription_active": "Подписка активна",
+  "expires_at": "Истекает {0}",
+  "available_plans": "Доступные тарифы",
+  "duration_days": "Длительность: {0} дней",
+  "purchase_initiated": "Покупка инициирована. Завершите оплату в приложении магазина.",
+  "purchase_error": "Ошибка покупки: {0}"
 }

@@ -43,5 +43,15 @@
   "select_apps": "Select apps",
   "select_apps_stub": "App selection - stub",
   "buy_subscription": "Buy subscription",
-  "logout": "Logout"
+  "logout": "Logout",
+  "subscription": "Subscription",
+  "error": "Error",
+  "retry": "Retry",
+  "no_tariffs_available": "No tariffs available",
+  "subscription_active": "Subscription is active",
+  "expires_at": "Expires at {0}",
+  "available_plans": "Available plans",
+  "duration_days": "Duration: {0} days",
+  "purchase_initiated": "Purchase initiated. Please complete the payment in your app store.",
+  "purchase_error": "Purchase error: {0}"
 }
