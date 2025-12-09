@@ -4,6 +4,7 @@ import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'api/iap_manager.dart';
 import 'api/vpn_service.dart';
+import 'api/models.dart';
 
 /// SubscriptionScreen — отображает доступные тарифы и позволяет
 /// выполнить покупку через In-App Purchases (Apple IAP или Google Play).
@@ -12,10 +13,10 @@ class SubscriptionScreen extends StatefulWidget {
   final IapManager iapManager;
 
   const SubscriptionScreen({
-    Key? key,
+    super.key,
     required this.vpnService,
     required this.iapManager,
-  }) : super(key: key);
+  });
 
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
@@ -25,7 +26,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   List<ProductDetails>? _products;
   bool _loading = true;
   String? _error;
-  Map<String, dynamic>? _currentSubscription;
+  UserSubscriptionOut? _currentSubscription;
   String? _purchasingProductId;
 
   @override
@@ -45,10 +46,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       final products = await widget.iapManager.getProducts();
 
       // Load current subscription status
-      final subscription = await widget.vpnService.get(
-        '/auth/me/subscription',
-        (json) => json as Map<String, dynamic>?,
-      );
+      final subscription = await widget.vpnService.getActiveSubscription();
 
       if (mounted) {
         setState(() {
@@ -184,9 +182,23 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
   Widget _buildCurrentSubscriptionCard() {
     final subscription = _currentSubscription!;
-    final daysRemaining = subscription['days_remaining'] as int? ?? 0;
-    final isLifetime = subscription['is_lifetime'] as bool? ?? false;
-    final tariffName = subscription['tariff_name'] as String? ?? 'Unknown';
+    
+    // Calculate days remaining
+    final endedAt = subscription.endedAt;
+    int daysRemaining = 0;
+    bool isLifetime = false;
+    
+    if (endedAt != null) {
+      final ended = DateTime.tryParse(endedAt);
+      if (ended != null) {
+        daysRemaining = ended.difference(DateTime.now()).inDays;
+        if (daysRemaining < 0) daysRemaining = 0;
+      }
+    } else {
+      isLifetime = true;
+    }
+    
+    final tariffName = subscription.tariffName;
 
     return Card(
       margin: const EdgeInsets.all(16),
@@ -243,7 +255,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Widget _buildNoSubscriptionCard() {
     return Card(
       margin: const EdgeInsets.all(16),
-      color: Colors.orange.withOpacity(0.1),
+      color: Colors.orange.withValues(alpha: 0.1),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -349,3 +361,4 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ),
     );
   }
+}

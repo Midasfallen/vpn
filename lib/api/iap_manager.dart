@@ -1,7 +1,7 @@
-/// In-App Purchase Manager for iOS and Android
-/// 
-/// Handles receipt validation, product queries, and payment processing.
-/// Communicates with backend via VpnService webhook endpoint.
+// In-App Purchase Manager for iOS and Android
+// 
+// Handles receipt validation, product queries, and payment processing.
+// Communicates with backend via VpnService webhook endpoint.
 
 import 'dart:async';
 import 'package:in_app_purchase/in_app_purchase.dart';
@@ -74,13 +74,11 @@ class IapManager {
           await _iapPlugin.queryProductDetails(productIds);
 
       if (response.notFoundIDs.isNotEmpty) {
-        print('Warning: Products not found: ${response.notFoundIDs}');
+        // Warning: Products not found
       }
 
       _products = response.productDetails;
-      print('Loaded ${_products?.length ?? 0} products');
     } catch (e) {
-      print('Error querying products: $e');
       _products = [];
     }
   }
@@ -95,7 +93,6 @@ class IapManager {
       await _iapPlugin.buyNonConsumable(purchaseParam: purchaseParam);
       return true;
     } catch (e) {
-      print('Error purchasing product: $e');
       return false;
     }
   }
@@ -105,7 +102,7 @@ class IapManager {
     try {
       await _iapPlugin.restorePurchases();
     } catch (e) {
-      print('Error restoring purchases: $e');
+      // Error restoring purchases
     }
   }
 
@@ -119,18 +116,16 @@ class IapManager {
   /// Process a single purchase
   Future<void> _processPurchase(PurchaseDetails purchase) async {
     if (purchase.status == PurchaseStatus.pending) {
-      print('Purchase pending: ${purchase.productID}');
       return;
     }
 
     if (purchase.status == PurchaseStatus.error) {
-      print('Purchase error: ${purchase.status}');
       _handlePurchaseError(purchase.error);
       return;
     }
 
     if (purchase.status == PurchaseStatus.restored) {
-      print('Purchase restored: ${purchase.productID}');
+      // Purchase restored
     }
 
     // Send receipt to backend for validation
@@ -139,37 +134,33 @@ class IapManager {
       try {
         await _sendReceiptToBackend(purchase);
       } catch (e) {
-        print('Error sending receipt to backend: $e');
+        // Error sending receipt to backend
       }
     }
 
     // Mark purchase as consumed (complete the purchase flow)
     if (purchase.pendingCompletePurchase) {
       await _iapPlugin.completePurchase(purchase);
-      print('Purchase completed: ${purchase.productID}');
     }
   }
 
   /// Send receipt to backend for validation
   Future<void> _sendReceiptToBackend(PurchaseDetails purchase) async {
     try {
-      final String? receipt = purchase.verificationData.localVerificationData;
+      final String receipt = purchase.verificationData.localVerificationData;
 
-      if (receipt == null || receipt.isEmpty) {
+      if (receipt.isEmpty) {
         throw Exception('No receipt data available');
       }
 
       // Send to backend webhook via VpnService
-      final response = await _vpnService.verifyIapReceipt(
+      final _ = await _vpnService.verifyIapReceipt(
         receipt: receipt,
         provider: 'apple',
         packageName: 'com.example.vpn',
         productId: purchase.productID,
       );
-
-      print('Receipt validated successfully: ${response.paymentId}');
     } catch (e) {
-      print('Error sending receipt to backend: $e');
       rethrow;
     }
   }
@@ -177,7 +168,7 @@ class IapManager {
   /// Handle purchase errors
   void _handlePurchaseError(IAPError? error) {
     if (error != null) {
-      print('IAP Error: ${error.code} - ${error.message}');
+      // IAP error occurred
     }
   }
 
