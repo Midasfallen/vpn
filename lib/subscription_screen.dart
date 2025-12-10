@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
-import 'package:in_app_purchase/in_app_purchase.dart';
 
 import 'api/iap_manager.dart';
 import 'api/vpn_service.dart';
@@ -21,13 +20,12 @@ class SubscriptionScreen extends StatefulWidget {
   @override
   State<SubscriptionScreen> createState() => _SubscriptionScreenState();
 }
-
 class _SubscriptionScreenState extends State<SubscriptionScreen> {
-  List<ProductDetails>? _products;
+  List<TariffOut>? _tariffs;  // Тарифы из API
   bool _loading = true;
   String? _error;
   UserSubscriptionOut? _currentSubscription;
-  String? _purchasingProductId;
+
 
   @override
   void initState() {
@@ -42,15 +40,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     });
 
     try {
-      // Load available products
-      final products = await widget.iapManager.getProducts();
+      // Load tariffs from backend API
+      final tariffs = await widget.vpnService.listTariffs();
 
       // Load current subscription status
       final subscription = await widget.vpnService.getActiveSubscription();
 
       if (mounted) {
         setState(() {
-          _products = products;
+          _tariffs = tariffs;  // Сохраняем тарифы из API
           _currentSubscription = subscription;
           _loading = false;
         });
@@ -65,38 +63,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
   }
 
-  Future<void> _handlePurchase(ProductDetails product) async {
-    setState(() {
-      _purchasingProductId = product.id;
-    });
-
-    try {
-      final success = await widget.iapManager.purchaseProduct(product);
-      if (success && mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('purchase_initiated'.tr())),
-        );
-        // Reload subscription status after a delay
-        await Future.delayed(const Duration(seconds: 2));
-        _loadSubscriptionData();
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('purchase_error'.tr(args: [e.toString()])),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _purchasingProductId = null;
-        });
-      }
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -146,7 +112,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
             const SizedBox(height: 24),
 
-            // Available plans
+            // Available plans from API
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -157,14 +123,14 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                   const SizedBox(height: 16),
-                  if (_products != null && _products!.isNotEmpty)
+                  if (_tariffs != null && _tariffs!.isNotEmpty)
                     ListView.builder(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      itemCount: _products!.length,
+                      itemCount: _tariffs!.length,
                       itemBuilder: (context, index) {
-                        final product = _products![index];
-                        return _buildPlanCard(product);
+                        final tariff = _tariffs![index];
+                        return _buildTariffCard(tariff);
                       },
                     )
                   else
@@ -279,10 +245,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  Widget _buildPlanCard(ProductDetails product) {
-    final isAnnual = product.id.contains('annual');
-    final isPurchasing = _purchasingProductId == product.id;
-
+  Widget _buildTariffCard(TariffOut tariff) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8),
       child: Padding(
@@ -298,21 +261,28 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        product.title,
+                        tariff.name,
                         style: Theme.of(context).textTheme.titleMedium,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      if (product.description.isNotEmpty)
+                      if (tariff.description.isNotEmpty)
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
                           child: Text(
-                            product.description,
+                            tariff.description,
                             style: Theme.of(context).textTheme.bodySmall,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          '${tariff.durationDays} ${'days'.tr()}',
+                          style: Theme.of(context).textTheme.labelSmall,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -320,24 +290,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Text(
-                      product.price,
+                      '\$${tariff.price}',
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: Colors.blue,
                           ),
                     ),
-                    if (isAnnual)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 4),
-                        child: Text(
-                          'best_value'.tr(),
-                          style:
-                              Theme.of(context).textTheme.labelSmall?.copyWith(
-                                    color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                        ),
-                      ),
                   ],
                 ),
               ],
@@ -346,14 +304,8 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: isPurchasing ? null : () => _handlePurchase(product),
-                child: isPurchasing
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text('purchase'.tr()),
+                onPressed: () => _selectTariff(tariff),
+                child: Text('select_plan'.tr()),
               ),
             ),
           ],
@@ -361,4 +313,13 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       ),
     );
   }
+
+  Future<void> _selectTariff(TariffOut tariff) async {
+    // For now, just show a message
+    // In future, integrate with payment system
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${tariff.name} selected')),
+    );
+  }
+
 }
