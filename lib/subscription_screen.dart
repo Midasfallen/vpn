@@ -315,11 +315,43 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Future<void> _selectTariff(TariffOut tariff) async {
-    // For now, just show a message
-    // In future, integrate with payment system
+    // Show loading
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${tariff.name} selected')),
+      SnackBar(
+        content: Text('subscribing_to'.tr(args: [tariff.name])),
+        duration: const Duration(seconds: 1),
+      ),
     );
+
+    try {
+      // Call backend to activate subscription
+      await widget.vpnService.subscribeTariff(tariff.id);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('subscription_activated'.tr(args: [tariff.name])),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Reload subscription data to show new active subscription
+        await Future.delayed(const Duration(milliseconds: 500));
+        _loadSubscriptionData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('error_subscribing'.tr(args: [e.toString()])),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
+
 
 }

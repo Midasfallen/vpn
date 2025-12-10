@@ -235,4 +235,15 @@ class VpnService {
     );
     return PaymentOut.fromJson(res);
   }
+
+  /// Активировать тариф для текущего пользователя (тестирование/демо)
+  Future<Map<String, dynamic>> subscribeTariff(int tariffId) async {
+    final body = {'tariff_id': tariffId};
+    final res = await api.post<Map<String, dynamic>>(
+      '/auth/subscribe',
+      body,
+      (json) => json as Map<String, dynamic>,
+    );
+    return res;
+  }
 }
