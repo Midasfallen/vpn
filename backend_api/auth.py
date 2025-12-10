@@ -50,7 +50,7 @@ def get_password_hash(password: str):
 
 
 def verify_password(plain, hashed):
-    return pwd_context.verify(plain, hashed)
+    return pwd_context.verify(plain[:72], hashed)
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
