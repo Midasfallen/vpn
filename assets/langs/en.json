@@ -53,5 +53,13 @@
   "available_plans": "Available plans",
   "duration_days": "Duration: {0} days",
   "purchase_initiated": "Purchase initiated. Please complete the payment in your app store.",
-  "purchase_error": "Purchase error: {0}"
+  "purchase_error": "Purchase error: {0}",
+  "subscribing_to": "Subscribing to {0}...",
+  "subscription_activated": "Successfully activated {0}!",
+  "error_subscribing": "Error activating subscription: {0}",
+  "subscription_expiring_soon": "Your subscription expires soon. Renew now.",
+  "lifetime_access": "Lifetime access",
+  "choose_plan_below": "Choose a plan below to activate a subscription.",
+  "days": "days",
+  "select_plan": "Select Plan"
 }
