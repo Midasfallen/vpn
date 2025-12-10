@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
-import 'api/iap_manager.dart';
 import 'api/vpn_service.dart';
 import 'api/models.dart';
 
@@ -9,12 +8,10 @@ import 'api/models.dart';
 /// выполнить покупку через In-App Purchases (Apple IAP или Google Play).
 class SubscriptionScreen extends StatefulWidget {
   final VpnService vpnService;
-  final IapManager iapManager;
 
   const SubscriptionScreen({
     super.key,
     required this.vpnService,
-    required this.iapManager,
   });
 
   @override
@@ -48,7 +45,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
       if (mounted) {
         setState(() {
-          _tariffs = tariffs;  // Сохраняем тарифы из API
+          _tariffs = _normalizeTariffs(tariffs);  // Normalize and synthesize canonical plans
           _currentSubscription = subscription;
           _loading = false;
         });
@@ -324,9 +321,41 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
 
     try {
-      // Call backend to activate subscription
+      // If this is a synthetic test tariff (id <= 0 and price == 0), simulate activation locally
+      if (tariff.id <= 0 && (tariff.price == '0' || tariff.price == '0.0')) {
+        // Create a local subscription object to show immediate activation for testing
+        final now = DateTime.now();
+        final ended = now.add(Duration(days: tariff.durationDays));
+        setState(() {
+          _currentSubscription = UserSubscriptionOut(
+            id: -1,
+            userId: -1,
+            tariffId: tariff.id,
+            tariffName: tariff.name,
+            startedAt: now.toIso8601String(),
+            endedAt: ended.toIso8601String(),
+            status: 'active',
+            durationDays: tariff.durationDays,
+            price: tariff.price,
+          );
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('subscription_activated'.tr(args: [tariff.name])),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+
+        return;
+      }
+
+      // Otherwise call backend to activate subscription
       await widget.vpnService.subscribeTariff(tariff.id);
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -351,6 +380,66 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         );
       }
     }
+  }
+
+  // Normalize tariffs returned from backend into a canonical set for the UI.
+  // This filters out legacy/duplicate plans and ensures a free 7-day test plan
+  // is always shown (synthesized if missing on the server).
+  List<TariffOut> _normalizeTariffs(List<TariffOut> serverTariffs) {
+    // Desired canonical plan keys with heuristics to match server names
+    final canonical = [
+      {'key': '1_month', 'names': ['1 month', 'monthly', 'monthly plan', '1 Month', 'Monthly Plan'], 'duration': 30},
+      {'key': '6_months', 'names': ['6 months', 'half', 'half-year', '6 Month', 'Half-Year Plan', '6 Months'], 'duration': 180},
+      {'key': '1_year', 'names': ['1 year', 'yearly', 'year', '1 Year', 'Yearly Plan'], 'duration': 365},
+      {'key': 'test_7_days', 'names': ['test', 'trial', '7 days', '7-day', 'trial 7 days'], 'duration': 7, 'price': '0'},
+    ];
+
+    final List<TariffOut> out = [];
+    int syntheticId = -1;
+
+    for (final plan in canonical) {
+      TariffOut? found;
+      for (final n in plan['names'] as List<String>) {
+        final key = n.toLowerCase();
+        // Check if any server tariff name contains this keyword (substring match)
+        for (final t in serverTariffs) {
+          if (t.name.toLowerCase().contains(key)) {
+            found = t;
+            break;
+          }
+        }
+        if (found != null) break;
+      }
+
+      if (found != null) {
+        // If server returned a plan but durationDays looks wrong (e.g. 30), prefer canonical duration
+        final desiredDuration = plan['duration'] as int;
+        final price = plan.containsKey('price') ? plan['price'] as String : found.price;
+        final tariff = TariffOut(
+          id: found.id,
+          name: found.name,
+          description: found.description,
+          durationDays: desiredDuration,
+          price: price,
+        );
+        out.add(tariff);
+      } else {
+        // Synthesize a plan (especially the free test plan)
+        final desiredDuration = plan['duration'] as int;
+        final price = plan.containsKey('price') ? plan['price'] as String : '0.99';
+        final name = (plan['key'] as String) == '1_month' ? '1 Month' : (plan['key'] as String) == '6_months' ? '6 Months' : (plan['key'] as String) == '1_year' ? '1 Year' : 'Test 7 Days';
+        out.add(TariffOut(
+          id: syntheticId,
+          name: name,
+          description: '',
+          durationDays: desiredDuration,
+          price: price,
+        ));
+        syntheticId -= 1;
+      }
+    }
+
+    return out;
   }
 
 

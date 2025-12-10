@@ -51,7 +51,7 @@ class VpnApp extends StatelessWidget {
       routes: {
         '/login': (_) => const AuthScreen(key: Key('login-screen')),
         '/home': (_) => const HomeScreen(),
-        '/subscription': (_) => SubscriptionScreen(vpnService: vpnService, iapManager: iapManager),
+        '/subscription': (_) => SubscriptionScreen(vpnService: vpnService),
       },
     );
   }
