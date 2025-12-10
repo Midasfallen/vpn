@@ -13,7 +13,12 @@ def create_tariff(t: schemas.TariffCreate, db: Session = Depends(get_db)):
     db_t = db.query(models.Tariff).filter(models.Tariff.name == t.name).first()
     if db_t:
         raise HTTPException(status_code=400, detail="Tariff already exists")
-    new = models.Tariff(name=t.name, price=t.price)
+    new = models.Tariff(
+        name=t.name,
+        description=t.description,
+        duration_days=t.duration_days if t.duration_days else 30,
+        price=t.price
+    )
     db.add(new)
     try:
         db.commit()
