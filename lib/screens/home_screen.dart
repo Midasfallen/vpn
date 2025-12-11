@@ -190,7 +190,7 @@ class HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       backgroundColor: AppColors.darkBg,
       appBar: AppBar(
-        title: const Text('VPN App'),
+        title: const Text('Incamp VPN'),
         backgroundColor: AppColors.darkBgSecondary,
         elevation: 0,
       ),
@@ -264,44 +264,21 @@ class HomeScreenState extends State<HomeScreen> {
                   ),
                   const SizedBox(height: 32),
                   
-                  // VPN Toggle Button - большая кнопка с градиентом и свечением
+                  // VPN Toggle Button - Изображение кнопки с эффектом нажатия
                   Center(
                     child: GestureDetector(
                       onTap: _toggleVpn,
-                      child: AnimatedContainer(
+                      child: AnimatedOpacity(
+                        opacity: _connected ? 1.0 : 0.7,
                         duration: const Duration(milliseconds: 300),
-                        width: 160,
-                        height: 160,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: _connected
-                                ? [AppColors.accentGold, AppColors.accentGoldDark]
-                                : [AppColors.darkBgTertiary, AppColors.borderLight],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: _connected
-                                  ? AppColors.accentGold.withOpacity(0.4)
-                                  : AppColors.darkBgTertiary.withOpacity(0.3),
-                              blurRadius: 24,
-                              offset: const Offset(0, 12),
-                            ),
-                          ],
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: _connected
-                                ? AppColors.accentCyan.withOpacity(0.3)
-                                : AppColors.borderDark,
-                            width: 2,
-                          ),
-                        ),
-                        child: Center(
-                          child: Icon(
-                            _connected ? Icons.lock_open : Icons.lock,
-                            size: 60,
-                            color: _connected ? AppColors.darkBg : AppColors.textTertiary,
+                        child: AnimatedScale(
+                          scale: _connected ? 1.0 : 0.95,
+                          duration: const Duration(milliseconds: 300),
+                          child: Image.asset(
+                            'assets/ea866ac6-8957-42ea-a843-e4eda0e6d9b7.jpg',
+                            width: 160,
+                            height: 160,
+                            fit: BoxFit.cover,
                           ),
                         ),
                       ),

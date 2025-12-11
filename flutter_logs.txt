@@ -1,0 +1,226 @@
+Resolving dependencies...
+Downloading packages...
+  _fe_analyzer_shared 85.0.0 (92.0.0 available)
+  analyzer 7.7.1 (9.0.0 available)
+  characters 1.4.0 (1.4.1 available)
+  connectivity_plus 6.1.5 (7.0.0 available)
+  crypto 3.0.6 (3.0.7 available)
+  flutter_lints 5.0.0 (6.0.0 available)
+  flutter_login 4.2.1 (6.0.0 available)
+  flutter_secure_storage_linux 1.2.3 (2.0.1 available)
+  flutter_secure_storage_macos 3.1.3 (4.0.0 available)
+  flutter_secure_storage_platform_interface 1.1.2 (2.0.1 available)
+  flutter_secure_storage_web 1.2.1 (2.0.0 available)
+  flutter_secure_storage_windows 3.1.2 (4.0.0 available)
+  font_awesome_flutter 10.9.1 (10.12.0 available)
+  http 0.13.6 (1.6.0 available)
+  intl_phone_number_input 0.7.4 (0.7.5 available)
+  js 0.6.7 (0.7.2 available)
+  lints 5.1.1 (6.0.0 available)
+  matcher 0.12.17 (0.12.18 available)
+  material_color_utilities 0.11.1 (0.13.0 available)
+  meta 1.16.0 (1.17.0 available)
+  path_provider_android 2.2.18 (2.2.22 available)
+  path_provider_foundation 2.4.2 (2.5.1 available)
+  phone_numbers_parser 8.3.0 (9.0.17 available)
+  process_run 0.14.2 (1.2.4 available)
+  shared_preferences 2.5.3 (2.5.4 available)
+  shared_preferences_android 2.4.12 (2.4.18 available)
+  shared_preferences_foundation 2.5.4 (2.5.6 available)
+  sign_in_button 3.2.0 (4.0.1 available)
+  test 1.26.2 (1.28.0 available)
+  test_api 0.7.6 (0.7.8 available)
+  test_core 0.6.11 (0.6.14 available)
+  url_launcher_android 6.3.20 (6.3.28 available)
+  url_launcher_ios 6.3.4 (6.3.6 available)
+  url_launcher_linux 3.2.1 (3.2.2 available)
+  url_launcher_macos 3.2.3 (3.2.5 available)
+  url_launcher_windows 3.1.4 (3.1.5 available)
+  vm_service 15.0.0 (15.0.2 available)
+  watcher 1.1.3 (1.1.4 available)
+  win32 5.14.0 (5.15.0 available)
+Got dependencies!
+39 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+Launching lib\main.dart on sdk gphone64 x86 64 in debug mode...
+Running Gradle task 'assembleDebug'...                          
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+warning: [options] To suppress warnings about obsolete options, use -Xlint:-options.
+3 warnings
+Running Gradle task 'assembleDebug'...                             90,6s
+тИЪ Built build\app\outputs\flutter-apk\app-debug.apk
+Installing build\app\outputs\flutter-apk\app-debug.apk...        2┬а922ms
+D/FlutterJNI(10543): Beginning load of flutter...
+D/FlutterJNI(10543): flutter (null) was loaded normally!
+I/flutter (10543): [IMPORTANT:flutter/shell/platform/android/android_context_gl_impeller.cc(104)] Using the Impeller rendering backend (OpenGLES).
+Syncing files to device sdk gphone64 x86 64...                  
+I/com.example.vpn(10543): hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityNodeInfo;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported,test-api) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+I/com.example.vpn(10543): hiddenapi: Accessing hidden method Landroid/view/accessibility/AccessibilityRecord;->getSourceNodeId()J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+I/com.example.vpn(10543): hiddenapi: Accessing hidden field Landroid/view/accessibility/AccessibilityNodeInfo;->mChildNodeIds:Landroid/util/LongArray; (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+I/com.example.vpn(10543): hiddenapi: Accessing hidden method Landroid/util/LongArray;->get(I)J (runtime_flags=0, domain=platform, api=unsupported) from Lio/flutter/view/AccessibilityViewEmbedder$ReflectionAccessors; (domain=app) using reflection: allowed
+D/CompatChangeReporter(10543): Compat change id reported: 377864165; UID 10217; state: ENABLED
+W/HWUI    (10543): Unknown dataspace 0
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Localization initialized[0m
+I/WindowExtensionsImpl(10543): Initializing Window Extensions, vendor API level=9, activity embedding enabled=true
+Syncing files to device sdk gphone64 x86 64...                     308ms
+
+Flutter run key commands.
+r Hot reload. 
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on sdk gphone64 x86 64 is available at: http://127.0.0.1:62511/7KOSCfucytY=/
+I/com.example.vpn(10543): Compiler allocated 5042KB to compile void android.view.ViewRootImpl.performTraversals()
+The Flutter DevTools debugger and profiler on sdk gphone64 x86 64 is available at: http://127.0.0.1:9106?uri=http://127.0.0.1:62511/7KOSCfucytY=/
+D/ProfileInstaller(10543): Installing profile for com.example.vpn
+I/Choreographer(10543): Skipped 67 frames!  The application may be doing too much work on its main thread.
+D/WindowLayoutComponentImpl(10543): Register WindowLayoutInfoListener on Context=com.example.vpn.MainActivity@609c76b, of which baseContext=android.app.ContextImpl@8037999
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Start[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Init state[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Build[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Init Localization Delegate[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Init provider[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Load Localization Delegate[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Load asset from assets/langs[0m
+I/Choreographer(10543): Skipped 44 frames!  The application may be doing too much work on its main thread.
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Build[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Init Localization Delegate[0m
+I/flutter (10543): [90m[ЁЯМО Easy Localization] [DEBUG] Init provider[0m
+I/Choreographer(10543): Skipped 38 frames!  The application may be doing too much work on its main thread.
+D/InsetsController(10543): hide(ime(), fromIme=false)
+I/ImeTracker(10543): com.example.vpn:eab07019: onCancelled at PHASE_CLIENT_ALREADY_HIDDEN
+I/com.example.vpn(10543): AssetManager2(0x778c3514f798) locale list changing from [] to [en-US]
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@a9ebb0d
+I/ImeTracker(10543): com.example.vpn:fe3466cd: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(10543): show(ime(), fromIme=false)
+D/InsetsController(10543): Setting requestedVisibleTypes to -1 (was -9)
+D/InputConnectionAdaptor(10543): The input method toggled cursor monitoring on
+I/AssistStructure(10543): Flattened final assist data: 624 bytes, containing 1 windows, 4 views
+W/InteractionJankMonitor(10543): Initializing without READ_DEVICE_CONFIG permission. enabled=false, interval=1, missedFrameThreshold=3, frameTimeThreshold=64, package=com.example.vpn
+I/ImeTracker(10543): com.example.vpn:fe3466cd: onShown
+I/ImeTracker(10543): com.example.vpn:d5b54046: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(10543): show(ime(), fromIme=false)
+I/ImeTracker(10543): com.example.vpn:d5b54046: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+D/InputConnectionAdaptor(10543): The input method toggled cursor monitoring on
+I/ImeTracker(10543): com.example.vpn:12c6b80: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT fromUser false
+D/InsetsController(10543): hide(ime(), fromIme=false)
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=android.view.ImeBackAnimationController@4827bd4
+D/InsetsController(10543): Setting requestedVisibleTypes to -9 (was -1)
+D/CompatChangeReporter(10543): Compat change id reported: 395521150; UID 10217; state: ENABLED
+I/ImeTracker(10543): system_server:115b61cf: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+I/flutter (10543): [DEBUG] HomeScreen._loadSubscriptionStatus() starting...
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@a9ebb0d
+I/flutter (10543): [DEBUG] HomeScreen loaded subscription: Instance of 'UserSubscriptionOut'
+I/flutter (10543): [DEBUG] Subscription found:
+I/flutter (10543): [DEBUG]   - status: active
+I/flutter (10543): [DEBUG]   - endedAt: 2025-12-17T19:53:45.891749+03:00
+I/flutter (10543): [DEBUG]   - tariffName: Test 7 Days Free
+I/flutter (10543): [DEBUG]   - durationDays: 7
+I/flutter (10543): [DEBUG] Setting _hasActiveSubscription = true
+I/flutter (10543): [DEBUG] Parsed subscription end date: 2025-12-17 16:53:45.891749Z
+I/flutter (10543): [DEBUG] SubscriptionScreen: Loaded 8 tariffs from backend
+I/flutter (10543): [DEBUG] Tariff: id=3, name=Unlimited, price=1200.0, durationDays=365
+I/flutter (10543): [DEBUG] Tariff: id=11, name=6 Months, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=12, name=1 Year, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=13, name=Monthly Plan, price=9.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=14, name=Half-Year Plan, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=15, name=Yearly Plan, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=16, name=Trial 7 Days, price=0.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=17, name=Test 7 Days Free, price=0.0, durationDays=7
+I/flutter (10543): [DEBUG] SubscriptionScreen: Active subscription: Instance of 'UserSubscriptionOut'
+I/flutter (10543): [DEBUG] SubscriptionScreen: Found subscription:
+I/flutter (10543): [DEBUG]   - status: active
+I/flutter (10543): [DEBUG]   - tariffName: Test 7 Days Free
+I/flutter (10543): [DEBUG]   - endedAt: 2025-12-17T19:53:45.891749+03:00
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=13, name=Monthly Plan тЖТ duration=30, price=9.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=11, name=6 Months тЖТ duration=180, price=49.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=12, name=1 Year тЖТ duration=365, price=99.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=17, name=Test 7 Days Free тЖТ duration=7, price=0
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@a9ebb0d
+I/com.example.vpn(10543): AssetManager2(0x778c3516d298) locale list changing from [] to [en-US]
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@a9ebb0d
+I/ImeTracker(10543): com.example.vpn:47fd7374: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(10543): show(ime(), fromIme=false)
+D/InsetsController(10543): Setting requestedVisibleTypes to -1 (was -9)
+I/AssistStructure(10543): Flattened final assist data: 624 bytes, containing 1 windows, 4 views
+D/InputConnectionAdaptor(10543): The input method toggled cursor monitoring on
+I/ImeTracker(10543): com.example.vpn:47fd7374: onShown
+I/ImeTracker(10543): com.example.vpn:26f0d757: onRequestShow at ORIGIN_CLIENT reason SHOW_SOFT_INPUT fromUser false
+D/InsetsController(10543): show(ime(), fromIme=false)
+I/ImeTracker(10543): com.example.vpn:26f0d757: onCancelled at PHASE_CLIENT_APPLY_ANIMATION
+D/InputConnectionAdaptor(10543): The input method toggled cursor monitoring on
+I/ImeTracker(10543): com.example.vpn:2da5f3d8: onRequestHide at ORIGIN_CLIENT reason HIDE_SOFT_INPUT fromUser false
+D/InsetsController(10543): hide(ime(), fromIme=false)
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=android.view.ImeBackAnimationController@4827bd4
+D/InsetsController(10543): Setting requestedVisibleTypes to -9 (was -1)
+I/ImeTracker(10543): system_server:ca7b0561: onCancelled at PHASE_CLIENT_ON_CONTROLS_CHANGED
+I/flutter (10543): [DEBUG] HomeScreen._loadSubscriptionStatus() starting...
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@a9ebb0d
+I/flutter (10543): [DEBUG] HomeScreen loaded subscription: null
+I/flutter (10543): [DEBUG] Subscription is NULL - no active subscription
+I/flutter (10543): [DEBUG] Setting _hasActiveSubscription = false (subscription is null or not active)
+I/flutter (10543): [DEBUG] SubscriptionScreen: Loaded 8 tariffs from backend
+I/flutter (10543): [DEBUG] Tariff: id=3, name=Unlimited, price=1200.0, durationDays=365
+I/flutter (10543): [DEBUG] Tariff: id=11, name=6 Months, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=12, name=1 Year, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=13, name=Monthly Plan, price=9.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=14, name=Half-Year Plan, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=15, name=Yearly Plan, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=16, name=Trial 7 Days, price=0.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=17, name=Test 7 Days Free, price=0.0, durationDays=7
+I/flutter (10543): [DEBUG] SubscriptionScreen: Active subscription: null
+I/flutter (10543): [DEBUG] SubscriptionScreen: NO active subscription (null)
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=13, name=Monthly Plan тЖТ duration=30, price=9.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=11, name=6 Months тЖТ duration=180, price=49.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=12, name=1 Year тЖТ duration=365, price=99.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=17, name=Test 7 Days Free тЖТ duration=7, price=0
+I/flutter (10543): [DEBUG] Selecting tariff: id=17, name=Test 7 Days Free, price=0, durationDays=7
+I/flutter (10543): [DEBUG] Subscribe response: {msg: subscription activated, user_tariff_id: 18, tariff_id: 17, started_at: 2025-12-10T20:28:41.563192+03:00, ended_at: 2025-12-17T20:28:41.563192+03:00}
+I/flutter (10543): [DEBUG] HomeScreen._loadSubscriptionStatus() starting...
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@a9ebb0d
+I/flutter (10543): [DEBUG] SubscriptionScreen: Loaded 8 tariffs from backend
+I/flutter (10543): [DEBUG] Tariff: id=3, name=Unlimited, price=1200.0, durationDays=365
+I/flutter (10543): [DEBUG] Tariff: id=11, name=6 Months, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=12, name=1 Year, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=13, name=Monthly Plan, price=9.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=14, name=Half-Year Plan, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=15, name=Yearly Plan, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=16, name=Trial 7 Days, price=0.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=17, name=Test 7 Days Free, price=0.0, durationDays=7
+I/flutter (10543): [DEBUG] SubscriptionScreen: Active subscription: Instance of 'UserSubscriptionOut'
+I/flutter (10543): [DEBUG] SubscriptionScreen: Found subscription:
+I/flutter (10543): [DEBUG]   - status: active
+I/flutter (10543): [DEBUG]   - tariffName: Test 7 Days Free
+I/flutter (10543): [DEBUG]   - endedAt: 2025-12-17T20:28:41.563192+03:00
+I/flutter (10543): [DEBUG] HomeScreen loaded subscription: Instance of 'UserSubscriptionOut'
+I/flutter (10543): [DEBUG] Subscription found:
+I/flutter (10543): [DEBUG]   - status: active
+I/flutter (10543): [DEBUG]   - endedAt: 2025-12-17T20:28:41.563192+03:00
+I/flutter (10543): [DEBUG]   - tariffName: Test 7 Days Free
+I/flutter (10543): [DEBUG]   - durationDays: 7
+I/flutter (10543): [DEBUG] Setting _hasActiveSubscription = true
+I/flutter (10543): [DEBUG] Parsed subscription end date: 2025-12-17 17:28:41.563192Z
+I/flutter (10543): [DEBUG] SubscriptionScreen: Loaded 8 tariffs from backend
+I/flutter (10543): [DEBUG] Tariff: id=3, name=Unlimited, price=1200.0, durationDays=365
+I/flutter (10543): [DEBUG] Tariff: id=11, name=6 Months, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=12, name=1 Year, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=13, name=Monthly Plan, price=9.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=14, name=Half-Year Plan, price=49.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=15, name=Yearly Plan, price=99.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=16, name=Trial 7 Days, price=0.99, durationDays=30
+I/flutter (10543): [DEBUG] Tariff: id=17, name=Test 7 Days Free, price=0.0, durationDays=7
+I/flutter (10543): [DEBUG] SubscriptionScreen: Active subscription: Instance of 'UserSubscriptionOut'
+I/flutter (10543): [DEBUG] SubscriptionScreen: Found subscription:
+I/flutter (10543): [DEBUG]   - status: active
+I/flutter (10543): [DEBUG]   - tariffName: Test 7 Days Free
+I/flutter (10543): [DEBUG]   - endedAt: 2025-12-17T20:28:41.563192+03:00
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=13, name=Monthly Plan тЖТ duration=30, price=9.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=11, name=6 Months тЖТ duration=180, price=49.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=12, name=1 Year тЖТ duration=365, price=99.99
+I/flutter (10543): [DEBUG] Normalized tariff from server: id=17, name=Test 7 Days Free тЖТ duration=7, price=0
+W/WindowOnBackDispatcher(10543): sendCancelIfRunning: isInProgress=false callback=io.flutter.embedding.android.FlutterActivity$1@a9ebb0d
+Lost connection to device.

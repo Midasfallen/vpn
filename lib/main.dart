@@ -38,7 +38,7 @@ class VpnApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'VPN App',
+      title: 'Incamp VPN',
       theme: AppTheme.darkTheme,
       localizationsDelegates: context.localizationDelegates,
       supportedLocales: context.supportedLocales,

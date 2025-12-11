@@ -266,11 +266,14 @@ def get_user_subscription(
         days_remaining = 36500
     
     return {
+        "id": user_tariff.id,
         "user_id": current_user.id,
         "tariff_id": tariff.id,
         "tariff_name": tariff.name,
-        "tariff_duration_days": tariff.duration_days,
-        "tariff_price": tariff.price,
+        "status": user_tariff.status,
+        "durationDays": tariff.duration_days,
+        "duration_days": tariff.duration_days,
+        "price": str(tariff.price),
         "started_at": user_tariff.started_at,
         "ended_at": user_tariff.ended_at,
         "days_remaining": days_remaining,

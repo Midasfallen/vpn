@@ -23,13 +23,22 @@ flutter test --coverage         # Generate coverage report (lcov.info)
 
 ### Building & Running
 ```bash
+flutter clean                   # Always clean before build if issues occur
+flutter pub get                 # Reinstall dependencies
+flutter build apk --debug       # Build APK without running (safer for debugging)
 flutter run                     # Debug on connected emulator/device
-flutter run --release          # Production build
-flutter analyze                # Lint checks (configured in analysis_options.yaml)
+flutter run --release           # Production build
+flutter analyze                 # Lint checks (configured in analysis_options.yaml)
 ```
 
 ### Local API Setup
 The app connects to `http://146.103.99.70:8000` (hardcoded in `client_instance.dart`). For local dev, modify the baseUrl and ensure the backend is running.
+
+**Testing Backend Subscription Flow:**
+```python
+# Use test_subscription.py to verify backend works end-to-end
+python test_subscription.py
+```
 
 ### CI/CD Pipeline
 GitHub Actions (`.github/workflows/ci.yaml`):
@@ -47,6 +56,220 @@ All exceptions → user-friendly localized messages through `error_mapper.dart`:
 - **Translation**: All error strings are `.tr()` localized (assets/langs/{en,ru}.json)
 
 **Example**: If backend returns 422 with `{"detail": [{"loc": ["body", "email"], "msg": "already registered"}]}`, the mapper extracts field="email", translates, and feeds to UI.
+
+### 2. Token Lifecycle & Refresh Flow
+1. Login → ApiClient receives token, calls `setToken()`, and persists via TokenStorage.saveToken()
+2. Each request includes `Authorization: Bearer <token>` header
+3. On 401 → ApiClient calls `onRefreshToken()` callback (defined in `client_instance.dart`)
+4. Callback uses refresh_token to call `/auth/refresh`, updates both access_token and refresh_token in TokenStorage
+5. Original request retried once with new token
+6. If refresh fails → return null and propagate 401 to UI
+
+**Files involved**: `api_client.dart` (retry logic), `client_instance.dart` (refresh handler), `token_storage.dart` (secure persistence)
+
+### 3. Null Safety in JSON Deserialization
+**CRITICAL**: All `fromJson()` factories MUST handle null values gracefully:
+
+```dart
+// GOOD - handles null for all fields
+factory TariffOut.fromJson(Map<String, dynamic> json) => TariffOut(
+  id: json['id'] as int? ?? -1,                              // fallback to -1
+  name: json['name'] as String? ?? 'Unknown',                // fallback to 'Unknown'
+  description: json['description']?.toString() ?? '',        // fallback to empty string
+  durationDays: (json['duration_days'] as int?) ?? 30,      // fallback to 30
+  price: (json['price'] != null ? json['price'].toString() : '0'),  // explicit null check
+);
+
+// BAD - will crash on null
+factory TariffOut.fromJson(Map<String, dynamic> json) => TariffOut(
+  id: json['id'] as int,              // ERROR: will crash if null!
+  durationDays: json['duration_days'] as int,  // ERROR: crashes
+);
+```
+
+**Best Practice**: In response mappers, wrap with null checks:
+```dart
+Future<UserSubscriptionOut?> getActiveSubscription() async {
+  try {
+    final res = await api.get<Map<String, dynamic>?>('/auth/me/subscription', (json) {
+      if (json == null) return null;  // Handle null response
+      return json as Map<String, dynamic>;
+    });
+    if (res == null) return null;     // Propagate null
+    return UserSubscriptionOut.fromJson(res);
+  } on ApiException catch (e) {
+    if (e.statusCode == 404) return null;
+    rethrow;
+  }
+}
+```
+
+### 4. API Response Handling
+When API returns `null` body (e.g., 204 No Content):
+- Mapper function receives `null`
+- Mapper must check and return `null` explicitly
+- Service layer must handle `null` return values
+- Never force cast null to non-nullable type
+
+Example error pattern to AVOID:
+```
+ERROR: type 'Null' is not a subtype of type 'Map<String, dynamic>' in type cast
+```
+
+### 5. Mapper Pattern for JSON Deserialization
+ApiClient.get/post use **mapper functions** (dynamic → domain object):
+```dart
+final users = await api.get<List<UserOut>>(
+  '/users/', 
+  (json) => (json as List).map((e) => UserOut.fromJson(e as Map)).toList()
+);
+```
+- Mapper receives raw parsed JSON (Map/List/null/String)
+- Mapper exceptions wrapped in ApiException
+- Empty 204 responses pass `null` to mapper
+- **MUST handle null**: `(json) => json == null ? null : json as Map`
+
+### 6. Localization with easy_localization
+All user-facing strings use `.tr()`:
+- Supported locales: `en`, `ru` (fallback: `en`)
+- Asset files: `assets/langs/{en,ru}.json`
+- Initialized in main() before runApp
+
+**Keys used**: 'invalid_credentials', 'password_min_length', 'email_already_registered', 'network_error', 'server_error', etc.
+
+### 7. VPN Peer Management
+- **Creation**: POST `/vpn_peers/self` → returns VpnPeerOut with wgPublicKey, wgIp, wgPrivateKey (once)
+- **Discovery**: GET `/vpn_peers/?skip=0&limit=10` → list user's peers
+- **Status**: GET `/vpn_peers/{id}/` → returns active flag
+- **Config**: GET `/vpn_peers/self/config` → returns wg-quick format (not yet fully implemented)
+
+**Flow in UI**: HomeScreen._toggleVpn() checks for existing peer, creates if needed, fetches info, shows status.
+
+### 8. Subscription Management (Backend-Driven, NOT IAP)
+**Important**: Subscription is handled via backend API, NOT Google Play or Apple IAP (both currently disabled).
+
+**Flow**:
+1. User registers → POST `/auth/register` (returns UserOut only, NO token)
+2. User logs in → POST `/auth/login` (returns access_token)
+3. User views tariffs → GET `/tariffs/` (returns list of TariffOut)
+4. User activates tariff → POST `/auth/subscribe` with `tariff_id` (returns subscription metadata)
+5. Check active subscription → GET `/auth/me/subscription` (returns UserSubscriptionOut or 404)
+
+**Tariff Normalization** (`subscription_screen.dart`):
+- Backend returns raw tariffs with various names (e.g., "Monthly Plan", "1 Month", "Trial 7 Days")
+- Frontend normalizes to canonical set: "1 Month", "6 Months", "1 Year", "Test 7 Days"
+- Uses substring matching (e.g., tariff name contains "monthly" → canonical "1 month")
+- Only shows real server tariffs; synthetic tariffs no longer created
+
+**Testing**: Use `test_subscription.py` to verify entire flow works before testing in app.
+
+### 9. Logging Best Practices
+Add debug prints with clear prefixes for troubleshooting:
+```dart
+print('[DEBUG] Loaded ${tariffs.length} tariffs from backend');
+print('[DEBUG] Tariff: id=${t.id}, name=${t.name}, price=${t.price}');
+print('[ERROR] Failed to subscribe: $e');
+print('[ERROR] Stack trace: $stackTrace');
+```
+
+Never use special Unicode characters (✓, ✗) in terminal output on Windows — causes encoding errors. Use [OK], [ERROR], etc.
+
+## Testing Strategy
+
+- **Unit Tests** (`test/` directory): Mock http.Client via `package:http/testing.dart`
+- **Coverage**: flutter_test + lcov.info in build/
+- **Test Patterns**:
+  - ApiClient tests: GET/POST, retry behavior, 401 refresh, empty bodies
+  - VpnService tests (raw_*_test.dart): Integration with mocked ApiClient
+  - Widget tests: UI rendering with flutter_login, localization
+
+**Example**: `api_client_test.dart` mocks responses, simulates network errors, verifies retry count and header updates.
+
+## Multi-platform Considerations
+
+- **Android**: build.gradle.kts (Kotlin), WireGuard integration via `wireguard_flutter` plugin
+- **iOS**: Swift (Runner.xcodeproj), same plugin
+- **Plugins Used**: flutter_secure_storage (platform-specific secure storage), flutter_login (platform-agnostic auth UI), wireguard_flutter (WireGuard config)
+
+**Platform Channel Communication**: Plugins use method channels; not exposed directly in ApiClient layer. VPN toggle UI calls platform layer separately (currently stubbed).
+
+## External Dependencies & Integration Points
+
+| Package | Purpose | Notes |
+|---------|---------|-------|
+| `http: ^0.13.6` | HTTP requests | Wrapped by ApiClient |
+| `flutter_secure_storage: ^9.0.0` | Token persistence | Platform-specific backends |
+| `flutter_login: ^4.0.0` | Login/signup UI | Pre-built widget with easy_localization integration |
+| `easy_localization: ^3.0.1` | i18n | Assets in `assets/langs/` |
+| `wireguard_flutter: ^0.1.3` | WireGuard integration | Not yet fully wired (VPN toggle is UI stub) |
+
+## Code Style & Conventions
+
+- **Dart Lints**: flutter_lints package (Material3 + standard rules in analysis_options.yaml)
+- **Naming**: camelCase for variables/methods, PascalCase for classes
+- **Null Safety**: Full null-safety enabled (SDK ^3.8.1)
+- **Comments**: Russian in code (matches codebase convention), describe *why* not *what*
+- **Logging**: ApiLogger (centralized) logs masked tokens, requests, responses for debugging
+
+## Common Tasks & Code Locations
+
+| Task | File(s) |
+|------|---------|
+| Add new API endpoint | `vpn_service.dart` (method), `models.dart` (response class) |
+| Modify error handling | `error_mapper.dart`, update i18n keys in `assets/langs/` |
+| Change auth flow | `client_instance.dart` (onRefreshToken), `vpn_service.dart` (login/register) |
+| Add/fix tests | `test/api_client_test.dart` or new test file using MockClient |
+| Localization strings | `assets/langs/{en,ru}.json`, reference in code via `.tr()` |
+| UI screens | `lib/main.dart` (screens are inlined or moved to separate files) |
+| Fix subscription issues | `lib/subscription_screen.dart`, `lib/api/vpn_service.dart`, `lib/api/models.dart` |
+
+## Known Limitations & TODOs
+
+- WireGuard config generation from peer info incomplete (GET /vpn_peers/self/config)
+- Password recovery not implemented (server-side missing)
+- App selection for VPN bypass (Android) currently a UI stub
+- No persistent logging or remote error reporting (Sentry integration suggested in README)
+- IAP (Google Play, Apple) currently disabled — only backend subscription flow implemented
+
+## Common Errors & Solutions
+
+### Error: `type 'Null' is not a subtype of type 'Map<String, dynamic>' in type cast`
+**Cause**: API returned null/empty response, mapper tried to cast null to Map.
+**Fix**: Add null check in mapper:
+```dart
+final res = await api.get<Map<String, dynamic>?>('/endpoint', (json) {
+  if (json == null) return null;
+  return json as Map<String, dynamic>;
+});
+if (res == null) return null;
+```
+
+### Error: `type 'Null' is not a subtype of type 'int' in type cast`
+**Cause**: JSON field expected to be `int` is null or missing.
+**Fix**: Use null-coalescing operator in fromJson:
+```dart
+durationDays: (json['duration_days'] as int?) ?? 30,  // fallback to 30
+```
+
+### Error: `UnicodeEncodeError` on Windows console
+**Cause**: Using special Unicode characters (✓, ✗) in print statements.
+**Fix**: Use ASCII alternatives:
+```dart
+print('[OK] Success');   // instead of ✓
+print('[ERROR] Failed'); // instead of ✗
+```
+
+### Subscription returns null when user has no active subscription
+**Expected behavior**: `getActiveSubscription()` returns null on 404, which is correct.
+**Check**: Ensure UI handles null subscription gracefully (shows "no active subscription" message, not error).
+
+## Windows Development Setup Notes
+
+- **PowerShell**: Use `Select-Object -First N` instead of `head -n N` for limiting output
+- **Flutter Emulator**: `flutter emulators` to list, `flutter emulators --launch <id>` to start
+- **Building**: Always use `flutter clean` before `flutter build apk` if encountering strange errors
+- **Testing**: Create test users with `create_test_user_flutter.py` script (generates random email + "TestPassword123")
+- **Backend Testing**: Use `test_subscription.py` to verify subscription flow before testing in app
 
 ### 2. Token Lifecycle & Refresh Flow
 1. Login → ApiClient receives token, calls `setToken()`, and persists via TokenStorage.saveToken()
