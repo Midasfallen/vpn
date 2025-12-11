@@ -14,7 +14,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 1), () {
+    Future.delayed(const Duration(seconds: 2), () {
       if (!mounted) {
         return;
       }
@@ -28,22 +28,27 @@ class _SplashScreenState extends State<SplashScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBg,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Image.asset(
+      body: Stack(
+        children: [
+          // Полноэкранное изображение
+          Positioned.fill(
+            child: Image.asset(
               'assets/image.jpg',
-              width: 200,
-              height: 200,
               fit: BoxFit.cover,
             ),
-            const SizedBox(height: 32),
-            CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary,
+          ),
+          // Прогресс-бар внизу экрана
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary,
+              ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
