@@ -6,6 +6,7 @@ import '../api/error_mapper.dart';
 import '../api/token_storage.dart';
 import '../api/connectivity_service.dart';
 import '../api/models.dart';
+import '../theme/colors.dart';
 
 /// HomeScreen - главный экран приложения с переключателем VPN и управлением подписками
 class HomeScreen extends StatefulWidget {
@@ -181,15 +182,17 @@ class HomeScreenState extends State<HomeScreen> {
     return _hasActiveSubscription && (_subscriptionEnd == null || _subscriptionEnd!.isBefore(now));
   }
 
+  // TODO: Implement VPN expiration warning in future
+  // This method will be used to show expiration notifications
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFF),
+      backgroundColor: AppColors.darkBg,
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
-        automaticallyImplyLeading: false,
-        title: null,
+        title: const Text('VPN App'),
+        backgroundColor: AppColors.darkBgSecondary,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -197,17 +200,17 @@ class HomeScreenState extends State<HomeScreen> {
             // Offline banner
             if (!_isOnline)
               Container(
-                color: Colors.amber,
+                color: AppColors.warning,
                 padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
                 child: Row(
                   children: [
-                    const Icon(Icons.wifi_off, size: 20, color: Colors.black),
+                    const Icon(Icons.wifi_off, size: 20, color: AppColors.darkBg),
                     const SizedBox(width: 8),
                     Text(
                       'offline_mode'.tr(),
                       style: const TextStyle(
                         fontSize: 14,
-                        color: Colors.black,
+                        color: AppColors.darkBg,
                         fontWeight: FontWeight.w500,
                       ),
                     ),
@@ -215,121 +218,125 @@ class HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 18),
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Карточка подписки
+                  // Карточка подписки (с дизайном свечения)
                   if (_hasActiveSubscription && _subscription != null)
                     _buildSubscriptionCard()
                   else
                     _buildNoSubscriptionCard(),
-                  const SizedBox(height: 20),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF6366F1),
-                        foregroundColor: Colors.white,
-                        elevation: 8,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        textStyle: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  const SizedBox(height: 28),
+                  
+                  // Кнопка "Купить подписку"
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentGold,
+                      foregroundColor: AppColors.darkBg,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      onPressed: () async {
-                        final refreshNeeded = await Navigator.pushNamed(context, '/subscription');
-                        // Если пользователь активировал подписку, обновляем статус
-                        if (refreshNeeded == true && mounted) {
-                          await _loadSubscriptionStatus();
-                        }
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(Icons.shopping_cart, size: 24),
-                          const SizedBox(width: 10),
-                          Text('buy_subscription'.tr()),
-                        ],
-                      ),
+                      elevation: 0,
+                    ),
+                    onPressed: () async {
+                      final refreshNeeded = await Navigator.pushNamed(context, '/subscription');
+                      // Если пользователь активировал подписку, обновляем статус
+                      if (refreshNeeded == true && mounted) {
+                        await _loadSubscriptionStatus();
+                      }
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.shopping_cart, size: 24),
+                        const SizedBox(width: 10),
+                        Text(
+                          'buy_subscription'.tr(),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 32),
+                  
+                  // VPN Toggle Button - большая кнопка с градиентом и свечением
                   Center(
                     child: GestureDetector(
                       onTap: _toggleVpn,
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 300),
-                        width: 140,
-                        height: 140,
+                        width: 160,
+                        height: 160,
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
                             colors: _connected
-                                ? const [Color(0xFF6366F1), Color(0xFF4F46E5)]
-                                : const [
-                                    Color(0xFFCBD5E1),
-                                    Color(0xFF94A3B8),
-                                  ],
+                                ? [AppColors.accentGold, AppColors.accentGoldDark]
+                                : [AppColors.darkBgTertiary, AppColors.borderLight],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: (_connected
-                                      ? const Color(0xFF6366F1)
-                                      : const Color(0xFFCBD5E1))
-                                  .withAlpha(60),
+                              color: _connected
+                                  ? AppColors.accentGold.withOpacity(0.4)
+                                  : AppColors.darkBgTertiary.withOpacity(0.3),
                               blurRadius: 24,
                               offset: const Offset(0, 12),
                             ),
                           ],
                           shape: BoxShape.circle,
+                          border: Border.all(
+                            color: _connected
+                                ? AppColors.accentCyan.withOpacity(0.3)
+                                : AppColors.borderDark,
+                            width: 2,
+                          ),
                         ),
                         child: Center(
                           child: Icon(
                             _connected ? Icons.lock_open : Icons.lock,
-                            size: 54,
-                            color: Colors.white,
+                            size: 60,
+                            color: _connected ? AppColors.darkBg : AppColors.textTertiary,
                           ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.tune),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: const Color(0xFF6366F1),
-                        elevation: 0,
-                        side: const BorderSide(
-                          color: Color(0xFF6366F1),
-                          width: 1.2,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        textStyle: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  const SizedBox(height: 32),
+                  
+                  // Кнопка "Выбрать приложения"
+                  OutlinedButton.icon(
+                    icon: const Icon(Icons.tune),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accentCyan,
+                      side: const BorderSide(
+                        color: AppColors.accentCyan,
+                        width: 2,
                       ),
-                      onPressed: () {
-                        // Заглушка: позже реализуем platform channel для открытия системного окна Android
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('select_apps_stub'.tr()),
-                          ),
-                        );
-                      },
-                      label: Text('select_apps'.tr()),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    onPressed: () {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('select_apps_stub'.tr()),
+                          backgroundColor: AppColors.info,
+                        ),
+                      );
+                    },
+                    label: Text(
+                      'select_apps'.tr(),
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ],
@@ -343,17 +350,23 @@ class HomeScreenState extends State<HomeScreen> {
         child: OutlinedButton.icon(
           key: const Key('logout-button'),
           icon: const Icon(Icons.logout),
-          label: Text('logout'.tr()),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: const Color(0xFFEF4444),
-            textStyle: const TextStyle(
+          label: Text(
+            'logout'.tr(),
+            style: const TextStyle(
               fontSize: 16,
-              fontWeight: FontWeight.bold,
+              fontWeight: FontWeight.w600,
             ),
-            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+          style: OutlinedButton.styleFrom(
+            foregroundColor: AppColors.error,
+            side: const BorderSide(
+              color: AppColors.error,
+              width: 2,
+            ),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           onPressed: () async {
             await _logout();
@@ -372,70 +385,94 @@ class HomeScreenState extends State<HomeScreen> {
     final isLifetime = _subscription!.endedAt == null;
     final tariffName = _subscription!.tariffName;
 
-    return Card(
-      elevation: 0,
-      color: const Color(0xFFD6E6FB),
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.darkBgSecondary,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.accentCyan.withOpacity(0.5),
+          width: 2,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentCyan.withOpacity(0.15),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'subscription_active'.tr(),
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.grey,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-            const SizedBox(height: 8),
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Expanded(
-                  child: Text(
-                    tariffName,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF3B82F6),
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                Text(
+                  'subscription_active'.tr(),
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: AppColors.textTertiary,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
                   ),
                 ),
-                const SizedBox(width: 8),
-                if (!isLifetime)
-                  Text(
-                    '$durationDays ${'days'.tr()}',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF3B82F6),
-                      fontSize: 15,
-                    ),
-                  )
-                else
-                  Text(
-                    'lifetime_access'.tr(),
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF3B82F6),
-                      fontSize: 15,
-                    ),
+                Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.accentCyan.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
                   ),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: const Icon(
+                    Icons.check_circle,
+                    size: 16,
+                    color: AppColors.accentCyan,
+                  ),
+                ),
               ],
             ),
+            const SizedBox(height: 12),
+            // Tariff name
+            Text(
+              tariffName,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accentCyan,
+                letterSpacing: 0.3,
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Duration
+            Text(
+              isLifetime
+                  ? 'lifetime_access'.tr()
+                  : '$durationDays ${'days'.tr()}',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: AppColors.textSecondary,
+                fontSize: 14,
+              ),
+            ),
+            // Warning if expiring soon
             if (!isLifetime && durationDays < 7)
               Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: Text(
-                  'subscription_expiring_soon'.tr(),
-                  style: const TextStyle(
-                    color: Colors.orange,
-                    fontSize: 12,
+                padding: const EdgeInsets.only(top: 12),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.warning.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                  child: Text(
+                    'subscription_expiring_soon'.tr(),
+                    style: const TextStyle(
+                      color: AppColors.warning,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -446,22 +483,36 @@ class HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildNoSubscriptionCard() {
-    return Card(
-      elevation: 0,
-      color: const Color(0xFFF3F4F6),
-      shape: RoundedRectangleBorder(
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.darkBgSecondary,
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.borderLight,
+          width: 1,
+        ),
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
         child: Center(
-          child: Text(
-            'no_active_subscription'.tr(),
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey[700],
-            ),
+          child: Column(
+            children: [
+              Icon(
+                Icons.card_giftcard,
+                size: 32,
+                color: AppColors.textTertiary.withOpacity(0.6),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'no_active_subscription'.tr(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
           ),
         ),
       ),

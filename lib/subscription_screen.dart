@@ -3,6 +3,7 @@ import 'package:easy_localization/easy_localization.dart';
 
 import 'api/vpn_service.dart';
 import 'api/models.dart';
+import 'theme/colors.dart';
 
 /// SubscriptionScreen — отображает доступные тарифы и позволяет
 /// выполнить покупку через In-App Purchases (Apple IAP или Google Play).
@@ -79,23 +80,49 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   Widget build(BuildContext context) {
     if (_loading) {
       return Scaffold(
-        appBar: AppBar(title: Text('subscription'.tr())),
-        body: const Center(child: CircularProgressIndicator()),
+        backgroundColor: AppColors.darkBg,
+        appBar: AppBar(
+          title: Text('subscription'.tr()),
+          backgroundColor: AppColors.darkBgSecondary,
+        ),
+        body: const Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentCyan),
+          ),
+        ),
       );
     }
 
     if (_error != null) {
       return Scaffold(
-        appBar: AppBar(title: Text('subscription'.tr())),
+        backgroundColor: AppColors.darkBg,
+        appBar: AppBar(
+          title: Text('subscription'.tr()),
+          backgroundColor: AppColors.darkBgSecondary,
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.red),
+              const Icon(Icons.error_outline, size: 64, color: AppColors.error),
               const SizedBox(height: 16),
-              Text('error'.tr()),
+              Text(
+                'error'.tr(),
+                style: const TextStyle(
+                  color: AppColors.textPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text(_error ?? ''),
+              Text(
+                _error ?? '',
+                style: const TextStyle(
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+                textAlign: TextAlign.center,
+              ),
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _loadSubscriptionData,
@@ -108,21 +135,25 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
 
     return Scaffold(
+      backgroundColor: AppColors.darkBg,
       appBar: AppBar(
         title: Text('subscription'.tr()),
-        centerTitle: true,
+        backgroundColor: AppColors.darkBgSecondary,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'available_plans'.tr(),
-                style: Theme.of(context).textTheme.titleLarge,
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: AppColors.textPrimary,
+                ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
               if (_tariffs != null && _tariffs!.isNotEmpty)
                 ListView.builder(
                   shrinkWrap: true,
@@ -130,12 +161,21 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                   itemCount: _tariffs!.length,
                   itemBuilder: (context, index) {
                     final tariff = _tariffs![index];
-                    return _buildTariffCard(tariff);
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildTariffCard(tariff),
+                    );
                   },
                 )
               else
                 Center(
-                  child: Text('no_tariffs_available'.tr()),
+                  child: Text(
+                    'no_tariffs_available'.tr(),
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 16,
+                    ),
+                  ),
                 ),
             ],
           ),
@@ -145,15 +185,33 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   Widget _buildTariffCard(TariffOut tariff) {
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+    final isFree = tariff.price == '0' || tariff.price.isEmpty;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.darkBgSecondary,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.borderLight,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.accentGold.withOpacity(0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Header: Name and Price
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
                   child: Column(
@@ -161,50 +219,88 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                     children: [
                       Text(
                         tariff.name,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                          letterSpacing: 0.2,
+                        ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
                       if (tariff.description.isNotEmpty)
                         Padding(
-                          padding: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.only(top: 6),
                           child: Text(
                             tariff.description,
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textTertiary,
+                              fontWeight: FontWeight.w400,
+                            ),
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(
-                          '${tariff.durationDays} ${'days'.tr()}',
-                          style: Theme.of(context).textTheme.labelSmall,
-                        ),
-                      ),
                     ],
                   ),
                 ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Text(
-                      '\$${tariff.price}',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
+                const SizedBox(width: 12),
+                Container(
+                  decoration: BoxDecoration(
+                    color: isFree ? AppColors.success.withOpacity(0.15) : AppColors.accentGold.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  child: Text(
+                    isFree ? 'Free' : '\$${tariff.price}',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: isFree ? AppColors.success : AppColors.accentGold,
                     ),
-                  ],
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () => _selectTariff(tariff),
-                child: Text('select_plan'.tr()),
+            // Duration info
+            Container(
+              decoration: BoxDecoration(
+                color: AppColors.darkBgTertiary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              child: Text(
+                '${tariff.durationDays} ${'days'.tr()}',
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.accentCyan,
+                  letterSpacing: 0.3,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Select button
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentGold,
+                foregroundColor: AppColors.darkBg,
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              onPressed: () => _selectTariff(tariff),
+              child: Text(
+                'select_plan'.tr(),
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 0.3,
+                ),
               ),
             ),
           ],
@@ -220,6 +316,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         SnackBar(
           content: Text('subscribing_to'.tr(args: [tariff.name])),
           duration: const Duration(seconds: 1),
+          backgroundColor: AppColors.info,
         ),
       );
     }
@@ -235,7 +332,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('subscription_activated'.tr(args: [tariff.name])),
-            backgroundColor: Colors.green,
+            backgroundColor: AppColors.success,
             duration: const Duration(seconds: 2),
           ),
         );
@@ -254,7 +351,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('error_subscribing'.tr(args: [e.toString()])),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
             duration: const Duration(seconds: 3),
           ),
         );
