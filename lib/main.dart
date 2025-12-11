@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'api/client_instance.dart';
-import 'api/iap_manager.dart';
+// import 'api/iap_manager.dart';  // Disabled for now — testing backend subscription only
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
@@ -13,28 +13,26 @@ void main() async {
   await EasyLocalization.ensureInitialized();
   await initApi();
 
-  // Initialize IAP manager (best-effort). Failure should not block app start.
-  final iapManager = IapManager();
-  try {
-    await iapManager.initialize(vpnService);
-  } catch (_) {
-    // IAP not available or initialization failed — app still usable.
-  }
+  // IAP initialization disabled for now — testing backend subscription only
+  // final iapManager = IapManager();
+  // try {
+  //   await iapManager.initialize(vpnService);
+  // } catch (_) {
+  //   // IAP not available or initialization failed — app still usable.
+  // }
 
   runApp(
     EasyLocalization(
       supportedLocales: const [Locale('en'), Locale('ru')],
       path: 'assets/langs',
       fallbackLocale: const Locale('en'),
-      child: VpnApp(iapManager: iapManager),
+      child: const VpnApp(),
     ),
   );
 }
 
 class VpnApp extends StatelessWidget {
-  final IapManager iapManager;
-
-  const VpnApp({super.key, required this.iapManager});
+  const VpnApp({super.key});
 
   @override
   Widget build(BuildContext context) {

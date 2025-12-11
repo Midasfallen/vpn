@@ -40,11 +40,11 @@ class TariffOut {
   TariffOut({required this.id, required this.name, required this.description, required this.durationDays, required this.price});
 
   factory TariffOut.fromJson(Map<String, dynamic> json) => TariffOut(
-    id: json['id'] as int,
-    name: json['name'] as String,
+    id: json['id'] as int? ?? -1,
+    name: json['name'] as String? ?? 'Unknown',
     description: json['description']?.toString() ?? '',
-    durationDays: json['duration_days'] as int,
-    price: json['price'].toString(),
+    durationDays: (json['duration_days'] as int?) ?? 30,
+    price: (json['price'] != null ? json['price'].toString() : '0'),
   );
 }
 
@@ -131,16 +131,82 @@ class UserSubscriptionOut {
   });
 
   factory UserSubscriptionOut.fromJson(Map<String, dynamic> json) => UserSubscriptionOut(
-    id: json['id'] as int,
-    userId: json['user_id'] as int,
-    tariffId: json['tariff_id'] as int,
+    id: (json['id'] as int?) ?? -1,
+    userId: (json['user_id'] as int?) ?? -1,
+    tariffId: (json['tariff_id'] as int?) ?? -1,
     tariffName: json['tariff_name'] as String? ?? 'Unknown',
-    startedAt: json['started_at'] as String,
+    startedAt: json['started_at'] as String? ?? '',
     endedAt: json['ended_at'] as String?,
-    status: json['status'] as String,
-    durationDays: json['duration_days'] as int? ?? 30,
-    price: json['price']?.toString() ?? '0',
+    status: _determineStatus(json),  // Determine status intelligently
+    durationDays: _calculateDurationDays(json),
+    price: json['price']?.toString() ?? 
+           json['tariff_price']?.toString() ?? 
+           '0',
   );
+
+  /// Determine subscription status based on available data
+  static String _determineStatus(Map<String, dynamic> json) {
+    // Try explicit status first
+    final status = json['status'] as String?;
+    if (status != null && status.isNotEmpty && status != 'None') {
+      return status;
+    }
+    
+    // If no explicit status but we have endedAt, check if expired
+    final endedAt = json['ended_at'] as String?;
+    if (endedAt != null && endedAt.isNotEmpty) {
+      try {
+        final ended = DateTime.parse(endedAt);
+        if (ended.isAfter(DateTime.now())) {
+          return 'active';
+        } else {
+          return 'expired';
+        }
+      } catch (_) {
+        // Default to active if we have endedAt but can't parse
+        return 'active';
+      }
+    }
+    
+    // Default to active (most likely for returned subscription)
+    return 'active';
+  }
+
+  /// Calculate duration days from available data
+  static int _calculateDurationDays(Map<String, dynamic> json) {
+    // Try explicit duration_days first
+    final durationDays = json['duration_days'] as int?;
+    if (durationDays != null && durationDays > 0) {
+      return durationDays;
+    }
+
+    // Try alternative field names
+    final durationDaysAlt = (json['durationDays'] as int?) ?? 
+                            (json['tariff_duration_days'] as int?);
+    if (durationDaysAlt != null && durationDaysAlt > 0) {
+      return durationDaysAlt;
+    }
+
+    // Try to calculate from started_at and ended_at
+    final startedAt = json['started_at'] as String?;
+    final endedAt = json['ended_at'] as String?;
+    if (startedAt != null && startedAt.isNotEmpty && 
+        endedAt != null && endedAt.isNotEmpty) {
+      try {
+        final started = DateTime.parse(startedAt);
+        final ended = DateTime.parse(endedAt);
+        final days = ended.difference(started).inDays;
+        if (days > 0) {
+          return days;
+        }
+      } catch (_) {
+        // If parsing fails, fall back to default
+      }
+    }
+
+    // Default to 30 days
+    return 30;
+  }
 
   bool get isActive {
     if (status != 'active') return false;

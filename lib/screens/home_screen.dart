@@ -5,6 +5,7 @@ import '../api/client_instance.dart';
 import '../api/error_mapper.dart';
 import '../api/token_storage.dart';
 import '../api/connectivity_service.dart';
+import '../api/models.dart';
 
 /// HomeScreen - главный экран приложения с переключателем VPN и управлением подписками
 class HomeScreen extends StatefulWidget {
@@ -17,16 +18,17 @@ class HomeScreen extends StatefulWidget {
 class HomeScreenState extends State<HomeScreen> {
   bool _connected = false;
   bool _isOnline = true;
-  final bool _hasActiveSubscription = false;
-  final bool _hasTrial = true;
-  final DateTime _subscriptionEnd = DateTime.now().add(const Duration(days: 10));
-  final DateTime _trialEnd = DateTime.now().add(const Duration(days: 3));
+  bool _hasActiveSubscription = false;
+  DateTime? _subscriptionEnd;
+  UserSubscriptionOut? _subscription; // Сохраняем полный объект подписки
 
   @override
   void initState() {
     super.initState();
     // Попытаться найти существующий peer у пользователя
     _loadPeer();
+    // Загружаем статус подписки
+    _loadSubscriptionStatus();
     // Слушаем изменения подключения к интернету
     connectivityService.addListener(_onConnectivityChanged);
     _checkConnectivity();
@@ -50,6 +52,60 @@ class HomeScreenState extends State<HomeScreen> {
       setState(() {
         _isOnline = isOnline;
       });
+    }
+  }
+
+  Future<void> _loadSubscriptionStatus() async {
+    try {
+      print('[DEBUG] HomeScreen._loadSubscriptionStatus() starting...');
+      final subscription = await vpnService.getActiveSubscription();
+      print('[DEBUG] HomeScreen loaded subscription: $subscription');
+      
+      if (subscription == null) {
+        print('[DEBUG] Subscription is NULL - no active subscription');
+      } else {
+        print('[DEBUG] Subscription found:');
+        print('[DEBUG]   - status: ${subscription.status}');
+        print('[DEBUG]   - endedAt: ${subscription.endedAt}');
+        print('[DEBUG]   - tariffName: ${subscription.tariffName}');
+        print('[DEBUG]   - durationDays: ${subscription.durationDays}');
+      }
+      
+      if (mounted) {
+        setState(() {
+          _subscription = subscription;
+          if (subscription != null && subscription.status == 'active') {
+            _hasActiveSubscription = true;
+            print('[DEBUG] Setting _hasActiveSubscription = true');
+            // Parse endedAt to DateTime if it's not null and not empty
+            if (subscription.endedAt != null && subscription.endedAt!.isNotEmpty) {
+              try {
+                _subscriptionEnd = DateTime.parse(subscription.endedAt!);
+                print('[DEBUG] Parsed subscription end date: $_subscriptionEnd');
+              } catch (e) {
+                print('[DEBUG] Failed to parse endedAt date: $e');
+                _subscriptionEnd = null;
+              }
+            } else {
+              _subscriptionEnd = null;
+            }
+          } else {
+            _hasActiveSubscription = false;
+            _subscriptionEnd = null;
+            print('[DEBUG] Setting _hasActiveSubscription = false (subscription is null or not active)');
+          }
+        });
+      }
+    } catch (e, stackTrace) {
+      print('[ERROR] Failed to load subscription status: $e');
+      print('[ERROR] Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _hasActiveSubscription = false;
+          _subscriptionEnd = null;
+          _subscription = null;
+        });
+      }
     }
   }
 
@@ -120,29 +176,9 @@ class HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  String _getStatusText() {
-    final now = DateTime.now();
-    if (_hasActiveSubscription && _subscriptionEnd.isAfter(now)) {
-      return 'subscription_active_until'.tr(args: [_formatDate(_subscriptionEnd)]);
-    } else if (_hasTrial && _trialEnd.isAfter(now)) {
-      return 'trial_until'.tr(args: [_formatDate(_trialEnd)]);
-    } else if (_hasActiveSubscription && _subscriptionEnd.isBefore(now)) {
-      return 'subscription_expired'.tr();
-    } else if (_hasTrial && _trialEnd.isBefore(now)) {
-      return 'trial_expired'.tr();
-    } else {
-      return 'no_active_subscription'.tr();
-    }
-  }
-
-  String _formatDate(DateTime date) {
-    return "${date.day.toString().padLeft(2, '0')}.${date.month.toString().padLeft(2, '0')}.${date.year}";
-  }
-
   bool _isExpired() {
     final now = DateTime.now();
-    return (_hasActiveSubscription && _subscriptionEnd.isBefore(now)) ||
-        (_hasTrial && _trialEnd.isBefore(now));
+    return _hasActiveSubscription && (_subscriptionEnd == null || _subscriptionEnd!.isBefore(now));
   }
 
   @override
@@ -183,42 +219,11 @@ class HomeScreenState extends State<HomeScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Card(
-                    elevation: 0,
-                    color: _isExpired()
-                        ? Colors.red.withAlpha(20)
-                        : (_hasActiveSubscription
-                            ? const Color(0xFFD6E6FB)
-                            : (_hasTrial && _trialEnd.isAfter(DateTime.now())
-                                ? const Color(0xFFD6E6FB)
-                                : const Color(0xFFF3F4F6))),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        vertical: 14,
-                        horizontal: 12,
-                      ),
-                      child: Center(
-                        child: Text(
-                          _getStatusText(),
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: _isExpired()
-                                ? Colors.red
-                                : (_hasActiveSubscription
-                                    ? const Color(0xFF3B82F6)
-                                    : (_hasTrial &&
-                                            _trialEnd.isAfter(DateTime.now())
-                                        ? const Color(0xFF3B82F6)
-                                        : Colors.grey[700])),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
+                  // Карточка подписки
+                  if (_hasActiveSubscription && _subscription != null)
+                    _buildSubscriptionCard()
+                  else
+                    _buildNoSubscriptionCard(),
                   const SizedBox(height: 20),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 8.0),
@@ -236,8 +241,12 @@ class HomeScreenState extends State<HomeScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/subscription');
+                      onPressed: () async {
+                        final refreshNeeded = await Navigator.pushNamed(context, '/subscription');
+                        // Если пользователь активировал подписку, обновляем статус
+                        if (refreshNeeded == true && mounted) {
+                          await _loadSubscriptionStatus();
+                        }
                       },
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -349,6 +358,111 @@ class HomeScreenState extends State<HomeScreen> {
           onPressed: () async {
             await _logout();
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSubscriptionCard() {
+    if (_subscription == null) {
+      return _buildNoSubscriptionCard();
+    }
+
+    final durationDays = _subscription!.durationDays;
+    final isLifetime = _subscription!.endedAt == null;
+    final tariffName = _subscription!.tariffName;
+
+    return Card(
+      elevation: 0,
+      color: const Color(0xFFD6E6FB),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'subscription_active'.tr(),
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.grey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Text(
+                    tariffName,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3B82F6),
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                if (!isLifetime)
+                  Text(
+                    '$durationDays ${'days'.tr()}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3B82F6),
+                      fontSize: 15,
+                    ),
+                  )
+                else
+                  Text(
+                    'lifetime_access'.tr(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF3B82F6),
+                      fontSize: 15,
+                    ),
+                  ),
+              ],
+            ),
+            if (!isLifetime && durationDays < 7)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  'subscription_expiring_soon'.tr(),
+                  style: const TextStyle(
+                    color: Colors.orange,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoSubscriptionCard() {
+    return Card(
+      elevation: 0,
+      color: const Color(0xFFF3F4F6),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 12),
+        child: Center(
+          child: Text(
+            'no_active_subscription'.tr(),
+            style: TextStyle(
+              fontSize: 17,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
         ),
       ),
     );

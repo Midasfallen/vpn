@@ -61,5 +61,7 @@
   "lifetime_access": "Lifetime access",
   "choose_plan_below": "Choose a plan below to activate a subscription.",
   "days": "days",
-  "select_plan": "Select Plan"
+  "select_plan": "Select Plan",
+  "subscription_already_active": "You already have an active paid subscription. Cancel it first before activating another.",
+  "cancel_subscription_first": "Cancel your current subscription before trying the free trial."
 }

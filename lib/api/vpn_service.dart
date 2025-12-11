@@ -148,7 +148,11 @@ class VpnService {
   /// Получить текущую активную подписку пользователя
   Future<UserSubscriptionOut?> getActiveSubscription() async {
     try {
-      final res = await api.get<Map<String, dynamic>>('/auth/me/subscription', (json) => json as Map<String, dynamic>);
+      final res = await api.get<Map<String, dynamic>?>('/auth/me/subscription', (json) {
+        if (json == null) return null;
+        return json as Map<String, dynamic>;
+      });
+      if (res == null) return null;
       return UserSubscriptionOut.fromJson(res);
     } on ApiException catch (e) {
       if (e.statusCode == 404) return null;
