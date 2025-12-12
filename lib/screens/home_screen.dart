@@ -16,12 +16,14 @@ class HomeScreen extends StatefulWidget {
   HomeScreenState createState() => HomeScreenState();
 }
 
-class HomeScreenState extends State<HomeScreen> {
+class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   bool _connected = false;
   bool _isOnline = true;
   bool _hasActiveSubscription = false;
   DateTime? _subscriptionEnd;
   UserSubscriptionOut? _subscription; // Сохраняем полный объект подписки
+  late AnimationController _expandController;
+  late Animation<double> _expandAnimation;
 
   @override
   void initState() {
@@ -33,10 +35,17 @@ class HomeScreenState extends State<HomeScreen> {
     // Слушаем изменения подключения к интернету
     connectivityService.addListener(_onConnectivityChanged);
     _checkConnectivity();
+    // Инициализируем контроллер расширения (анимация растекания цвета)
+    _expandController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+    _expandAnimation = CurvedAnimation(parent: _expandController, curve: Curves.easeOut);
   }
 
   @override
   void dispose() {
+    _expandController.dispose();
     connectivityService.removeListener(_onConnectivityChanged);
     super.dispose();
   }
@@ -126,6 +135,7 @@ class HomeScreenState extends State<HomeScreen> {
       setState(() {
         _connected = false;
       });
+      _expandController.reverse();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('vpn_disconnected'.tr())),
@@ -157,6 +167,7 @@ class HomeScreenState extends State<HomeScreen> {
       setState(() {
         _connected = true;
       });
+      _expandController.forward();
 
       final statusText = peerInfo.active ? 'active' : 'inactive';
       ScaffoldMessenger.of(context).showSnackBar(
@@ -187,8 +198,18 @@ class HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: _connected ? AppColors.accentGold : AppColors.darkBg,
+    return AnimatedBuilder(
+      animation: _expandAnimation,
+      builder: (context, child) {
+        final progress = _expandAnimation.value;
+        final bgColor = Color.lerp(
+          AppColors.darkBg,
+          AppColors.accentGold,
+          _connected ? progress : 0.0,
+        ) ?? AppColors.darkBg;
+
+        return Scaffold(
+          backgroundColor: bgColor,
       appBar: AppBar(
         title: const Text('Incamp VPN'),
         backgroundColor: AppColors.darkBgSecondary,
@@ -377,6 +398,8 @@ class HomeScreenState extends State<HomeScreen> {
           },
         ),
       ),
+        );
+      },
     );
   }
 
