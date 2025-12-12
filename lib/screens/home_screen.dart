@@ -392,6 +392,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
         ),
       ),
+        );
+      },
     );
   }
 
