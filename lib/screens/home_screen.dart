@@ -285,7 +285,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 32),
                   
-                  // VPN Toggle Button - Золотая кнопка по умолчанию, изображение при подключении
+                  // VPN Toggle Button - иконка чёрная, при подключении: фон чёрный, иконка золотая
                   Center(
                     child: GestureDetector(
                       onTap: _toggleVpn,
@@ -295,39 +295,33 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         child: AnimatedScale(
                           scale: 1.0,
                           duration: const Duration(milliseconds: 300),
-                          child: _connected
-                              ? Image.asset(
-                                  'assets/ea866ac6-8957-42ea-a843-e4eda0e6d9b7.jpg',
-                                  width: 160,
-                                  height: 160,
-                                  fit: BoxFit.cover,
-                                )
-                              : Container(
-                                  width: 160,
-                                  height: 160,
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      colors: [AppColors.accentGold, AppColors.accentGoldDark],
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                    ),
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
+                          child: Container(
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              color: _connected ? Colors.black : Colors.transparent,
+                              shape: BoxShape.circle,
+                              boxShadow: _connected
+                                  ? [
                                       BoxShadow(
-                                        color: AppColors.accentGold.withOpacity(0.4),
+                                        color: Colors.black.withOpacity(0.3),
                                         blurRadius: 24,
                                         offset: const Offset(0, 12),
                                       ),
-                                    ],
-                                  ),
-                                  child: const Center(
-                                    child: Icon(
-                                      Icons.power_settings_new,
-                                      size: 60,
-                                      color: AppColors.darkBg,
-                                    ),
-                                  ),
-                                ),
+                                    ]
+                                  : [],
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/ea866ac6-8957-42ea-a843-e4eda0e6d9b7-removebg-preview (1).png',
+                                width: 120,
+                                height: 120,
+                                fit: BoxFit.contain,
+                                color: _connected ? AppColors.accentGold : Colors.black,
+                                colorBlendMode: BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
                         ),
                       ),
                     ),
