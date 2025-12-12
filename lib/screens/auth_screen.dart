@@ -56,7 +56,7 @@ class AuthScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return FlutterLogin(
       key: const Key('login-screen'),
-      title: 'VPN',
+      title: 'Incamp VPN',
       onLogin: _authUser,
       onSignup: _signupUser,
       onRecoverPassword: _recoverPassword,
@@ -77,9 +77,9 @@ class AuthScreen extends StatelessWidget {
         flushbarTitleSuccess: 'registration_auto_login_failed'.tr(),
       ),
       theme: LoginTheme(
-        primaryColor: Theme.of(context).colorScheme.primary,
-        accentColor: Colors.indigoAccent,
-        buttonTheme: const LoginButtonTheme(backgroundColor: Colors.indigo),
+        primaryColor: const Color(0xFFFCD34D),
+        accentColor: const Color(0xFFFCD34D),
+        buttonTheme: const LoginButtonTheme(backgroundColor: Color(0xFFFCD34D)),
       ),
       onSubmitAnimationCompleted: () {
         Navigator.pushReplacementNamed(context, '/home');

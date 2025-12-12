@@ -33,7 +33,7 @@ class _SplashScreenState extends State<SplashScreen> {
           // Полноэкранное изображение
           Positioned.fill(
             child: Image.asset(
-              'assets/image.jpg',
+              'assets/ea866ac6-8957-42ea-a843-e4eda0e6d9b7-removebg-preview (1).png',
               fit: BoxFit.cover,
             ),
           ),
