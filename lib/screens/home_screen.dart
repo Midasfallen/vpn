@@ -250,11 +250,11 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     _buildNoSubscriptionCard(),
                   const SizedBox(height: 28),
                   
-                  // Кнопка "Купить подписку"
+                  // Кнопка "Купить подписку" - золотая изначально, чёрная при подключении
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentGold,
-                      foregroundColor: AppColors.darkBg,
+                      backgroundColor: _connected ? Colors.black : AppColors.accentGold,
+                      foregroundColor: _connected ? AppColors.accentGold : AppColors.darkBg,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
