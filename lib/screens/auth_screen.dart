@@ -80,6 +80,11 @@ class AuthScreen extends StatelessWidget {
         primaryColor: const Color(0xFFFCD34D),
         accentColor: const Color(0xFFFCD34D),
         buttonTheme: const LoginButtonTheme(backgroundColor: Color(0xFFFCD34D)),
+        titleStyle: const TextStyle(
+          color: Colors.black,
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       onSubmitAnimationCompleted: () {
         Navigator.pushReplacementNamed(context, '/home');

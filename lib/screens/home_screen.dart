@@ -285,56 +285,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   ),
                   const SizedBox(height: 32),
                   
-                  // VPN Toggle Button - иконка чёрная, при подключении: фон чёрный, иконка золотая
-                  Center(
-                    child: GestureDetector(
-                      onTap: _toggleVpn,
-                      child: AnimatedOpacity(
-                        opacity: 1.0,
-                        duration: const Duration(milliseconds: 300),
-                        child: AnimatedScale(
-                          scale: 1.0,
-                          duration: const Duration(milliseconds: 300),
-                          child: Container(
-                            width: 160,
-                            height: 160,
-                            decoration: BoxDecoration(
-                              color: _connected ? Colors.black : Colors.transparent,
-                              shape: BoxShape.circle,
-                              boxShadow: _connected
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        blurRadius: 24,
-                                        offset: const Offset(0, 12),
-                                      ),
-                                    ]
-                                  : [],
-                            ),
-                            child: Center(
-                              child: Image.asset(
-                                'assets/ea866ac6-8957-42ea-a843-e4eda0e6d9b7-removebg-preview (1).png',
-                                width: 120,
-                                height: 120,
-                                fit: BoxFit.contain,
-                                color: _connected ? AppColors.accentGold : Colors.black,
-                                colorBlendMode: BlendMode.srcIn,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  
-                  // Кнопка "Выбрать приложения"
+                  // Кнопка "Выбрать приложения" - золотая изначально, чёрная при подключении
                   OutlinedButton.icon(
                     icon: const Icon(Icons.tune),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accentCyan,
-                      side: const BorderSide(
-                        color: AppColors.accentCyan,
+                      foregroundColor: _connected ? Colors.black : AppColors.accentGold,
+                      side: BorderSide(
+                        color: _connected ? Colors.black : AppColors.accentGold,
                         width: 2,
                       ),
                       shape: RoundedRectangleBorder(
@@ -358,42 +315,83 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 28),
+                  
+                  // VPN Toggle Button - золотой фон с чёрной иконкой, при подключении: чёрный фон с золотой иконкой
+                  Center(
+                    child: GestureDetector(
+                      onTap: _toggleVpn,
+                      child: AnimatedOpacity(
+                        opacity: 1.0,
+                        duration: const Duration(milliseconds: 300),
+                        child: AnimatedScale(
+                          scale: 1.0,
+                          duration: const Duration(milliseconds: 300),
+                          child: Container(
+                            width: 160,
+                            height: 160,
+                            decoration: BoxDecoration(
+                              color: _connected ? Colors.black : AppColors.accentGold,
+                              shape: BoxShape.circle,
+                              boxShadow: [
+                                BoxShadow(
+                                  color: (_connected ? Colors.black : AppColors.accentGold).withOpacity(0.3),
+                                  blurRadius: 24,
+                                  offset: const Offset(0, 12),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Image.asset(
+                                'assets/ea866ac6-8957-42ea-a843-e4eda0e6d9b7-removebg-preview (1).png',
+                                width: 140,
+                                height: 140,
+                                fit: BoxFit.contain,
+                                color: _connected ? AppColors.accentGold : Colors.black,
+                                colorBlendMode: BlendMode.srcIn,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
           ],
         ),
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-        child: OutlinedButton.icon(
-          key: const Key('logout-button'),
-          icon: const Icon(Icons.logout),
-          label: Text(
-            'logout'.tr(),
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.only(left: 18, right: 18, top: 8, bottom: 12),
+          child: OutlinedButton.icon(
+            key: const Key('logout-button'),
+            icon: const Icon(Icons.logout),
+            label: Text(
+              'logout'.tr(),
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
             ),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.error,
+              side: const BorderSide(
+                color: AppColors.error,
+                width: 2,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 14),
+            ),
+            onPressed: () async {
+              await _logout();
+            },
           ),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: AppColors.error,
-            side: const BorderSide(
-              color: AppColors.error,
-              width: 2,
-            ),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            padding: const EdgeInsets.symmetric(vertical: 14),
-          ),
-          onPressed: () async {
-            await _logout();
-          },
         ),
       ),
-        );
-      },
     );
   }
 
