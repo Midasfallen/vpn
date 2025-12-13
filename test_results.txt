@@ -1,0 +1,32 @@
+00:00 +0: loading C:/vpn/test/api_client_test.dart
+00:00 +0: C:/vpn/test/api_client_test.dart: ApiClient get returns decoded json
+00:00 +1: C:/vpn/test/api_client_test.dart: ApiClient post with body returns parsed json
+00:00 +2: C:/vpn/test/api_client_test.dart: ApiClient empty body calls mapper with null
+00:00 +3: C:/vpn/test/api_client_test.dart: ApiClient retries on transient error
+00:00 +4: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:00 +5: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:00 +6: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:00 +7: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:00 +8: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:00 +9: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:01 +9: C:/vpn/test/raw_http_vpn_test.dart: raw HTTP register/login/create peer
+  Skip: Requires live server or MockClient
+00:01 +9 ~1: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:01 +10 ~1: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:01 +10 ~1: C:/vpn/test/raw_vpn_peer_test.dart: raw POST to /vpn_peers/ shows redirect and headers
+  Skip: Requires live server or MockClient
+00:01 +10 ~2: C:/vpn/test/logout_button_test.dart: Logout navigates to login
+00:01 +11 ~2: C:/vpn/test/raw_auth_vpn_test.dart: raw auth POST to /vpn_peers/ with token
+00:02 +12 ~2: C:/vpn/test/raw_auth_vpn_test.dart: raw auth POST to /vpn_peers/ with token
+01:00 +12 ~2 -1: C:/vpn/test/vpn_peer_test.dart: create peer via API (POST /vpn_peers)
+01:00 +12 ~2 -1: C:/vpn/test/raw_auth_vpn_test.dart: raw auth POST to /vpn_peers/ with token [E]
+  TimeoutException after 0:01:00.000000: Test timed out after 1 minutes.
+  dart:isolate  _RawReceivePort._handleMessage
+  
+01:00 +12 ~2 -1: C:/vpn/test/vpn_peer_test.dart: create peer via API (POST /vpn_peers)
+01:01 +12 ~2 -2: C:/vpn/test/vpn_peer_test.dart: create peer via API (POST /vpn_peers) [E]
+  TimeoutException after 0:01:00.000000: Test timed out after 1 minutes.
+  dart:isolate  _RawReceivePort._handleMessage
+  
+01:01 +12 ~2 -2: C:/vpn/test/vpn_peer_test.dart: (tearDownAll)
+01:01 +12 ~2 -2: Some tests failed.

@@ -132,47 +132,69 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _toggleVpn() async {
     if (_connected) {
+      // Отключаемся от VPN
       setState(() {
         _connected = false;
       });
       _expandController.reverse();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('vpn_disconnected'.tr())),
-        );
+      
+      try {
+        // Отключаем VPN через VpnManager
+        await vpnService.vpnManager.disconnect();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('vpn_disconnected'.tr())),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          final msg = mapErrorToMessage(e);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(msg)),
+          );
+        }
       }
       return;
     }
 
+    // Подключаемся к VPN
     setState(() {
       _connected = true; // оптимистично
     });
 
     try {
-      // Проверяем, есть ли peer у пользователя
+      // 1. Проверяем, есть ли peer у пользователя и создаём если нужно
       final existing = await vpnService.getUserPeerId();
-      int pid;
       if (existing == null) {
-        final created = await vpnService.createPeer();
-        pid = created.id;
-      } else {
-        pid = existing;
+        await vpnService.createPeer();
       }
 
-      // Подключаем (получаем информацию о peer)
-      final peerInfo = await vpnService.connectPeer(pid);
+      // 2. Инициализируем WireGuard интерфейс (один раз перед первым подключением)
+      // Это можно вызвать один раз при запуске приложения, но обычно безопасно вызывать несколько раз
+      final initSuccess = await vpnService.vpnManager.initialize();
+      if (!initSuccess) {
+        throw Exception('VPN initialization failed');
+      }
 
-      // Устанавливаем флаг подключено
+      // 3. ГЛАВНОЕ: Подключаемся через VpnManager с использованием wireguard_flutter
+      // Адрес сервера WireGuard (IP:PORT фиксированный для всех пользователей)
+      const serverAddress = '62.84.98.109:51820';
+      final connected = await vpnService.vpnManager.connect(serverAddress);
+      
+      if (!connected) {
+        throw Exception('Failed to activate WireGuard VPN');
+      }
+
       if (!mounted) return;
       setState(() {
         _connected = true;
       });
       _expandController.forward();
 
-      final statusText = peerInfo.active ? 'active' : 'inactive';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('vpn_connected'.tr(args: [statusText])),
+          content: Text('vpn_connected'.tr(args: ['active'])),
+          backgroundColor: Colors.green,
         ),
       );
     } catch (e) {
@@ -182,7 +204,10 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final msg = mapErrorToMessage(e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
+          SnackBar(
+            content: Text(msg),
+            backgroundColor: Colors.red,
+          ),
         );
       }
     }

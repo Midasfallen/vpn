@@ -5,8 +5,13 @@ import 'dart:io';
 
 import 'package:test/test.dart';
 import 'package:vpn/api/client_instance.dart';
+import 'package:vpn/config/environment.dart';
 
 void main() {
+  setUpAll(() {
+    Environment.initialize(flavor: 'dev');
+  });
+
   test('raw auth POST to /vpn_peers/ with token', () async {
     final ts = DateTime.now().millisecondsSinceEpoch;
     final email = 'test+${ts}@example.com';

@@ -1,10 +1,18 @@
 import 'api_client.dart';
 import 'models.dart';
 import 'token_storage.dart';
+import 'vpn_manager.dart';
+import 'logging.dart';
+import 'wireguard_helper.dart';
 
 class VpnService {
   final ApiClient api;
-  VpnService({required this.api});
+  late final VpnManager vpnManager;
+
+  VpnService({required this.api}) {
+    // Инициализируем VpnManager с этим сервисом
+    vpnManager = VpnManager(vpnService: this);
+  }
 
   // Auth
   Future<String> login(String email, String password) async {
@@ -44,14 +52,27 @@ class VpnService {
   }
 
   Future<VpnPeerOut> createPeer({String? deviceName, String? wgPublicKey, String? wgIp, String? allowedIps}) async {
-    // Server expects POST /vpn_peers/self with optional body {device_name, wg_public_key, wg_ip, allowed_ips}
+    // Server expects POST /vpn_peers/self with body {device_name, wg_public_key, wg_ip, allowed_ips}
+    // If wg_public_key is not provided, generate a WireGuard key pair
+    String? publicKey = wgPublicKey;
+    
+    if (publicKey == null) {
+      // Generate WireGuard key pair locally
+      ApiLogger.info('VpnService.createPeer: No public key provided, generating WireGuard key pair');
+      final keyPair = WireGuardHelper.generateKeyPair();
+      publicKey = keyPair['public']!;
+      ApiLogger.info('VpnService.createPeer: Generated WireGuard key pair, public key length=${publicKey.length}');
+    }
+    
     final body = <String, dynamic>{};
     if (deviceName != null) body['device_name'] = deviceName;
-    if (wgPublicKey != null) body['wg_public_key'] = wgPublicKey;
+    body['wg_public_key'] = publicKey;  // Always send the public key
     if (wgIp != null) body['wg_ip'] = wgIp;
     if (allowedIps != null) body['allowed_ips'] = allowedIps;
 
+    ApiLogger.info('VpnService.createPeer: Sending POST /vpn_peers/self with body: $body');
     final res = await api.post<Map<String, dynamic>>('/vpn_peers/self', body, (json) => json as Map<String, dynamic>);
+    ApiLogger.info('VpnService.createPeer: Server returned peer: id=${res['id']}, wg_ip=${res['wg_ip']}, has_wg_private_key=${res['wg_private_key'] != null}');
     return VpnPeerOut.fromJson(res);
   }
 
@@ -78,18 +99,28 @@ class VpnService {
   Future<String> fetchWgQuick() async {
     // Try GET first (server may implement GET returning 404 if not stored yet)
     try {
+      ApiLogger.info('VpnService.fetchWgQuick: Trying GET /vpn_peers/self/config');
       final resGet = await api.get<dynamic>('/vpn_peers/self/config', (json) => json);
+      ApiLogger.info('VpnService.fetchWgQuick: GET returned: $resGet');
       // If returned string or map — process below
-      if (resGet is String) return resGet;
+      if (resGet is String) {
+        ApiLogger.info('VpnService.fetchWgQuick: Got string response, size=${resGet.length} bytes');
+        return resGet;
+      }
       if (resGet is Map<String, dynamic>) {
+        ApiLogger.info('VpnService.fetchWgQuick: Got map response with keys: ${resGet.keys.toList()}');
         final cfg = resGet['wg_quick'] ?? resGet['wg_quick_config'] ?? resGet['config'];
-        if (cfg != null) return cfg.toString();
+        if (cfg != null) {
+          ApiLogger.info('VpnService.fetchWgQuick: Found wg_quick in response');
+          return cfg.toString();
+        }
         final privateKey = resGet['wg_private_key'] ?? resGet['wg_private'];
         final publicKey = resGet['wg_public_key'] ?? resGet['wg_public'];
         final endpoint = resGet['endpoint'];
         final allowedIps = resGet['allowed_ips'] ?? '0.0.0.0/0';
         final wgIp = resGet['wg_ip'];
         if (privateKey != null && publicKey != null) {
+          ApiLogger.info('VpnService.fetchWgQuick: Building config from map parts');
           final buffer = StringBuffer();
           buffer.writeln('[Interface]');
           if (wgIp != null) buffer.writeln('Address = ${wgIp.toString()}');
@@ -102,12 +133,14 @@ class VpnService {
         }
       }
     } on ApiException catch (e) {
+      ApiLogger.error('VpnService.fetchWgQuick: ApiException status=${e.statusCode}: ${e.body}', e, null);
       if (e.statusCode == 404) {
         // No stored config for peer — return informative exception
         throw Exception('No stored config for peer (server returned 404). Create peer and ensure server stores config first.');
       }
       // For other statuses fall through to POST fallback
     } catch (e) {
+      ApiLogger.error('VpnService.fetchWgQuick: Non-ApiException: $e', null, null);
       // Non-ApiException error — fallthrough to POST fallback
     }
 

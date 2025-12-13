@@ -63,5 +63,7 @@
   "days": "days",
   "select_plan": "Select Plan",
   "subscription_already_active": "You already have an active paid subscription. Cancel it first before activating another.",
-  "cancel_subscription_first": "Cancel your current subscription before trying the free trial."
+  "cancel_subscription_first": "Cancel your current subscription before trying the free trial.",
+  "error_disconnecting": "Failed to disconnect from VPN",
+  "error_vpn_connect": "Failed to connect to VPN. Please try again."
 }

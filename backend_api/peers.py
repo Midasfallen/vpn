@@ -50,11 +50,15 @@ def create_peer(  # noqa: C901 - function is intentionally a bit complex; refact
     # container for any metadata returned by external controllers
     extra_metadata: dict = {}
 
-    # For db-backed keys, ensure we have a public key placeholder and an IP
-    # so DB constraints are satisfied when tests provide a minimal payload.
+    # For db-backed keys, use the public key provided by client (mandatory)
+    # If client doesn't provide public key, we cannot generate a valid WireGuard config
     if key_policy == "db":
         if not public:
-            public = f"db:{secrets.token_urlsafe(16)}"
+            # Client MUST provide a public key for db-backed mode
+            raise HTTPException(
+                status_code=400,
+                detail="wg_public_key is required for db-backed key policy. Client must generate a WireGuard key pair and send the public key."
+            )
         if not payload.wg_ip:
             payload.wg_ip = _alloc_dummy_ip(target_user)
 

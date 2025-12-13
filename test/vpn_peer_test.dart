@@ -8,8 +8,13 @@ import 'dart:io';
 import 'package:test/test.dart';
 import 'package:vpn/api/client_instance.dart';
 import 'package:vpn/api/vpn_service.dart';
+import 'package:vpn/config/environment.dart';
 
 void main() {
+  setUpAll(() {
+    Environment.initialize(flavor: 'dev');
+  });
+
   test('create peer via API (POST /vpn_peers)', () async {
     try {
       final ts = DateTime.now().millisecondsSinceEpoch;

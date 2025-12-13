@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:easy_localization/easy_localization.dart';
 
 import 'api/vpn_service.dart';
+import 'api/logging.dart';
 import 'api/models.dart';
 import 'theme/colors.dart';
 
@@ -38,22 +39,15 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     try {
       // Load tariffs from backend API
       final tariffs = await widget.vpnService.listTariffs();
-      print('[DEBUG] SubscriptionScreen: Loaded ${tariffs.length} tariffs from backend');
-      for (final t in tariffs) {
-        print('[DEBUG] Tariff: id=${t.id}, name=${t.name}, price=${t.price}, durationDays=${t.durationDays}');
-      }
+      ApiLogger.debug('SubscriptionScreen: Loaded ${tariffs.length} tariffs');
 
       // Load current subscription status
       final subscription = await widget.vpnService.getActiveSubscription();
-      print('[DEBUG] SubscriptionScreen: Active subscription: $subscription');
       
       if (subscription == null) {
-        print('[DEBUG] SubscriptionScreen: NO active subscription (null)');
+        ApiLogger.debug('SubscriptionScreen: No active subscription');
       } else {
-        print('[DEBUG] SubscriptionScreen: Found subscription:');
-        print('[DEBUG]   - status: ${subscription.status}');
-        print('[DEBUG]   - tariffName: ${subscription.tariffName}');
-        print('[DEBUG]   - endedAt: ${subscription.endedAt}');
+        ApiLogger.debug('SubscriptionScreen: Active subscription found - tariff=${subscription.tariffName}');
       }
 
       if (mounted) {
@@ -63,8 +57,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         });
       }
     } catch (e, stackTrace) {
-      print('[ERROR] SubscriptionScreen: Failed to load subscription data: $e');
-      print('[ERROR] SubscriptionScreen: Stack trace: $stackTrace');
+      ApiLogger.error('SubscriptionScreen: Failed to load subscription data: $e', e, stackTrace);
       
       if (mounted) {
         setState(() {
@@ -197,7 +190,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accentGold.withOpacity(0.05),
+            color: AppColors.accentGold.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -248,7 +241,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 const SizedBox(width: 12),
                 Container(
                   decoration: BoxDecoration(
-                    color: isFree ? AppColors.success.withOpacity(0.15) : AppColors.accentGold.withOpacity(0.15),
+                    color: isFree ? AppColors.success.withValues(alpha: 0.15) : AppColors.accentGold.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -322,11 +315,11 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
 
     try {
-      print('[DEBUG] Selecting tariff: id=${tariff.id}, name=${tariff.name}, price=${tariff.price}, durationDays=${tariff.durationDays}');
+      ApiLogger.debug('SubscriptionScreen: Selected tariff id=${tariff.id}, name=${tariff.name}');
       
       // Call backend to activate subscription
-      final response = await widget.vpnService.subscribeTariff(tariff.id);
-      print('[DEBUG] Subscribe response: $response');
+      await widget.vpnService.subscribeTariff(tariff.id);
+      ApiLogger.debug('SubscriptionScreen: Subscribe response received');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -344,8 +337,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         }
       }
     } catch (e, stackTrace) {
-      print('[ERROR] Failed to subscribe: $e');
-      print('[ERROR] Stack trace: $stackTrace');
+      ApiLogger.error('SubscriptionScreen: Failed to subscribe: $e', e, stackTrace);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -394,7 +386,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         final desiredDuration = plan['duration'] as int;
         final price = plan.containsKey('price') ? plan['price'] as String : found.price;
         
-        print('[DEBUG] Normalized tariff from server: id=${found.id}, name=${found.name} → duration=$desiredDuration, price=$price');
+        ApiLogger.debug('SubscriptionScreen: Normalized tariff id=${found.id}, name=${found.name}, duration=$desiredDuration');
         
         final tariff = TariffOut(
           id: found.id,  // Use real server ID

@@ -116,6 +116,7 @@ class UserSubscriptionOut {
   final String? endedAt;
   final String status; // active, expired, cancelled
   final int durationDays;
+  final int daysRemaining; // Оставшиеся дни подписки (динамическое значение)
   final String price;
 
   UserSubscriptionOut({
@@ -127,6 +128,7 @@ class UserSubscriptionOut {
     this.endedAt,
     required this.status,
     required this.durationDays,
+    required this.daysRemaining,
     required this.price,
   });
 
@@ -139,10 +141,42 @@ class UserSubscriptionOut {
     endedAt: json['ended_at'] as String?,
     status: _determineStatus(json),  // Determine status intelligently
     durationDays: _calculateDurationDays(json),
+    daysRemaining: _calculateDaysRemaining(json), // Добавлено
     price: json['price']?.toString() ?? 
            json['tariff_price']?.toString() ?? 
            '0',
   );
+
+  /// Вычислить ОСТАВШИЕСЯ дни подписки (динамическое значение)
+  static int _calculateDaysRemaining(Map<String, dynamic> json) {
+    // Попробовать явное поле days_remaining из бэка
+    final daysRemaining = json['days_remaining'] as int?;
+    if (daysRemaining != null && daysRemaining >= 0) {
+      return daysRemaining;
+    }
+
+    // Fallback: вычислить из ended_at
+    final endedAt = json['ended_at'] as String?;
+    if (endedAt != null && endedAt.isNotEmpty) {
+      try {
+        final ended = DateTime.parse(endedAt);
+        final now = DateTime.now();
+        final days = ended.difference(now).inDays;
+        return days >= 0 ? days : 0;
+      } catch (_) {
+        // Не могли спарсить дату
+      }
+    }
+
+    // Fallback: если is_lifetime == true, вернуть большое число
+    final isLifetime = json['is_lifetime'] as bool? ?? false;
+    if (isLifetime) {
+      return 36500;  // ~100 лет
+    }
+
+    // Default: нет информации
+    return 0;
+  }
 
   /// Determine subscription status based on available data
   static String _determineStatus(Map<String, dynamic> json) {
