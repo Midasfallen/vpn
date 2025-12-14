@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../theme/app_colors.dart';
+import '../theme/colors.dart';
 
 /// Reusable error display widgets with recovery options
 class ErrorWidget extends StatelessWidget {

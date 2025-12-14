@@ -27,17 +27,40 @@ void main() {
         (json) => json as Map<String, dynamic>);
 
     final token = loginRes['access_token'] ?? loginRes['token'] ?? loginRes['detail'] ?? loginRes['access'];
+    expect(token, isNotNull, reason: 'Login should return access_token');
 
-    final uri = Uri.parse('http://146.103.99.70:8000/vpn_peers/');
     final client = HttpClient();
     try {
-      final req = await client.postUrl(uri);
-      req.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
-      if (token != null) req.headers.set(HttpHeaders.authorizationHeader, 'Bearer ${token.toString()}');
-      req.add(utf8.encode('{}'));
-      final resp = await req.close();
-      await resp.transform(utf8.decoder).join();
-      expect(resp.statusCode, anyOf([200,201,202]));
+      // Create tariff
+      final tariffName = 'test-${DateTime.now().millisecondsSinceEpoch % 1000000}';
+      final tariffReq = await client.postUrl(Uri.parse('http://146.103.99.70:8000/tariffs/'));
+      tariffReq.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+      tariffReq.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      tariffReq.add(utf8.encode('{"name": "$tariffName", "price": 100}'));
+      final tariffResp = await tariffReq.close();
+      final tariffBody = await tariffResp.transform(utf8.decoder).join();
+      final tariffData = jsonDecode(tariffBody) as Map<String, dynamic>;
+
+      // Subscribe to tariff
+      if (tariffResp.statusCode == 200 || tariffResp.statusCode == 201) {
+        final tariffId = tariffData['id'];
+        final subscribeReq = await client.postUrl(Uri.parse('http://146.103.99.70:8000/auth/subscribe'));
+        subscribeReq.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+        subscribeReq.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+        subscribeReq.add(utf8.encode('{"tariff_id": $tariffId}'));
+        final subscribeResp = await subscribeReq.close();
+        await subscribeResp.transform(utf8.decoder).join();
+      }
+
+      // Create peer
+      final peerUri = Uri.parse('http://146.103.99.70:8000/vpn_peers/self');
+      final peerReq = await client.postUrl(peerUri);
+      peerReq.headers.set(HttpHeaders.contentTypeHeader, 'application/json');
+      peerReq.headers.set(HttpHeaders.authorizationHeader, 'Bearer $token');
+      peerReq.add(utf8.encode('{"device_name": "test_device"}'));
+      final peerResp = await peerReq.close();
+      await peerResp.transform(utf8.decoder).join();
+      expect(peerResp.statusCode, anyOf([200,201,202]));
     } finally {
       client.close(force: true);
     }

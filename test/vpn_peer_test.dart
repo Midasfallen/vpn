@@ -35,6 +35,18 @@ void main() {
           loginRes['access'];
       if (token != null) apiClient.setToken(token.toString());
 
+      // Create tariff and subscribe (required for peer creation)
+      final tariffName = 'test-${DateTime.now().millisecondsSinceEpoch % 1000000}';
+      final tariffRes = await apiClient.post<Map<String, dynamic>>(
+          '/tariffs/', {'name': tariffName, 'price': 100},
+          (json) => json as Map<String, dynamic>);
+
+      if (tariffRes != null && tariffRes['id'] != null) {
+        await apiClient.post<Map<String, dynamic>>(
+            '/auth/subscribe', {'tariff_id': tariffRes['id']},
+            (json) => json as Map<String, dynamic>);
+      }
+
       final peer = await vpnService.createPeer();
 
       expect(peer.id, isNonZero);
