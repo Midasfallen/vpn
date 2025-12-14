@@ -213,13 +213,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
   }
 
-  bool _isExpired() {
-    final now = DateTime.now();
-    return _hasActiveSubscription && (_subscriptionEnd == null || _subscriptionEnd!.isBefore(now));
-  }
-
   // TODO: Implement VPN expiration warning in future
-  // This method will be used to show expiration notifications
 
   @override
   Widget build(BuildContext context) {
@@ -360,7 +354,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                               shape: BoxShape.circle,
                               boxShadow: [
                                 BoxShadow(
-                                  color: (_connected ? Colors.black : AppColors.accentGold).withOpacity(0.3),
+                                  color: (_connected ? Colors.black : AppColors.accentGold).withValues(alpha: 0.3),
                                   blurRadius: 24,
                                   offset: const Offset(0, 12),
                                 ),
@@ -436,12 +430,12 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         color: AppColors.darkBgSecondary,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.accentCyan.withOpacity(0.5),
+          color: AppColors.accentCyan.withValues(alpha: 0.5),
           width: 2,
         ),
         boxShadow: [
           BoxShadow(
-            color: AppColors.accentCyan.withOpacity(0.15),
+            color: AppColors.accentCyan.withValues(alpha: 0.15),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -467,7 +461,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 ),
                 Container(
                   decoration: BoxDecoration(
-                    color: AppColors.accentCyan.withOpacity(0.2),
+                    color: AppColors.accentCyan.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -508,7 +502,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 padding: const EdgeInsets.only(top: 12),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: AppColors.warning.withOpacity(0.15),
+                    color: AppColors.warning.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -546,7 +540,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               Icon(
                 Icons.card_giftcard,
                 size: 32,
-                color: AppColors.textTertiary.withOpacity(0.6),
+                color: AppColors.textTertiary.withValues(alpha: 0.6),
               ),
               const SizedBox(height: 8),
               Text(
