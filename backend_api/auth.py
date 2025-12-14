@@ -317,16 +317,29 @@ def user_subscribe(
     current_user: models.User = Depends(get_current_user),
 ):
     """Activate tariff for the authenticated user (for testing/demo purposes).
-    
+
     In production, this would be called after successful payment verification.
     """
     # Check tariff exists
     db_tariff = db.query(models.Tariff).filter(models.Tariff.id == assign.tariff_id).first()
     if not db_tariff:
         raise HTTPException(status_code=404, detail="Tariff not found")
-    
-    # Create new UserTariff record (allows multiple subscriptions/renewals)
+
+    # Check if user already has an active subscription
     now = datetime.now(UTC)
+    existing_active = (
+        db.query(models.UserTariff)
+        .filter(
+            models.UserTariff.user_id == current_user.id,
+            models.UserTariff.status == "active",
+            (models.UserTariff.ended_at == None) | (models.UserTariff.ended_at > now)
+        )
+        .first()
+    )
+    if existing_active:
+        raise HTTPException(status_code=400, detail="already_has_active_subscription")
+
+    # Create new UserTariff record
     user_tariff = models.UserTariff(
         user_id=current_user.id,
         tariff_id=assign.tariff_id,
