@@ -137,7 +137,7 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         _connected = false;
       });
       _expandController.reverse();
-      
+
       try {
         // Отключаем VPN через VpnManager
         await vpnService.vpnManager.disconnect();
@@ -154,6 +154,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           );
         }
       }
+      return;
+    }
+
+    // Проверяем наличие активной подписки перед подключением
+    if (!_hasActiveSubscription) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('no_active_subscription'.tr()),
+          backgroundColor: Colors.red,
+        ),
+      );
       return;
     }
 
