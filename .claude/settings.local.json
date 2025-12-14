@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(flutter devices:*)",
+      "Bash(flutter run:*)",
+      "Bash(ssh root@146.103.99.70 \"docker ps && docker logs vpn-api-web-1 --tail 30\")",
+      "Bash(ssh:*)",
+      "Bash(ls:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nfix: prevent duplicate subscriptions and fix VPN connectivity\n\nCritical fixes:\n- Prevent users from purchasing duplicate active subscriptions\n- Fix WireGuard config generation with correct server public key\n- Add subscription validation before VPN connection\n- Update endpoint to correct port 51821\n- Add WG_SERVER_PUBLIC_KEY, WG_ENDPOINT, WG_DNS to env\n\nBackend:\n- Check for existing active subscription before allowing new purchase\n- Return 400 error with ''already_has_active_subscription'' message\n- Add subscription check in VPN peer endpoints\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)",
+      "Bash(cat:*)",
+      "Bash(git commit:*)",
+      "Bash(gh auth:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(pytest:*)",
+      "Bash(git reset:*)",
+      "Bash(flutter analyze:*)",
+      "Bash(flutter test:*)"
+    ]
+  }
+}

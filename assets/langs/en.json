@@ -65,5 +65,9 @@
   "subscription_already_active": "You already have an active paid subscription. Cancel it first before activating another.",
   "cancel_subscription_first": "Cancel your current subscription before trying the free trial.",
   "error_disconnecting": "Failed to disconnect from VPN",
-  "error_vpn_connect": "Failed to connect to VPN. Please try again."
+  "error_vpn_connect": "Failed to connect to VPN. Please try again.",
+  "error_vpn_connect_no_subscription": "An active subscription is required to connect to VPN. Please choose a plan.",
+  "user_not_active": "User is not active",
+  "admin_privileges_required": "Admin privileges required",
+  "access_denied": "Access denied"
 }

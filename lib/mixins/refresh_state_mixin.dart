@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../api/error_mapper.dart';
 
 /// Mixin for managing async data loading, refresh, and error states
 mixin RefreshStateMixin<T extends StatefulWidget> on State<T> {
@@ -85,11 +86,11 @@ mixin RefreshStateMixin<T extends StatefulWidget> on State<T> {
       await Future.delayed(delay);
       
       await operation();
-      
+
       setLoaded();
     } catch (e) {
-      setError(e.toString());
-      
+      setError(mapErrorToMessage(e));
+
       // Auto-retry if not exceeded max retries
       if (shouldAutoRetry()) {
         await Future.delayed(const Duration(milliseconds: 500));
@@ -106,10 +107,10 @@ mixin RefreshStateMixin<T extends StatefulWidget> on State<T> {
       });
       
       await refreshOperation();
-      
+
       setLoaded();
     } catch (e) {
-      setError(e.toString());
+      setError(mapErrorToMessage(e));
       setState(() {
         isRefreshing = false;
       });

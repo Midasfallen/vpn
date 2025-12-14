@@ -23,7 +23,22 @@ String mapErrorToMessage(Object e) {
       if (status == 403) {
         try {
           if (parsed is Map && parsed['detail'] is String) {
-            return parsed['detail'].toString();
+            final detail = parsed['detail'].toString();
+            // Преобразуем технические сообщения в локализованные
+            if (detail == 'no_active_subscription') {
+              return 'error_vpn_connect_no_subscription'.tr();
+            }
+            if (detail == 'User not active') {
+              return 'user_not_active'.tr();
+            }
+            if (detail == 'Not allowed') {
+              return 'access_denied'.tr();
+            }
+            if (detail.contains('Admin privileges required')) {
+              return 'admin_privileges_required'.tr();
+            }
+            // Для других 403 ошибок возвращаем как есть, если это уже человекочитаемый текст
+            return detail;
           }
         } catch (_) {}
         return 'subscription_expired'.tr();

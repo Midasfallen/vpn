@@ -4,6 +4,7 @@ import 'package:easy_localization/easy_localization.dart';
 import 'api/vpn_service.dart';
 import 'api/logging.dart';
 import 'api/models.dart';
+import 'api/error_mapper.dart';
 import 'theme/colors.dart';
 
 /// SubscriptionScreen — отображает доступные тарифы и позволяет
@@ -58,10 +59,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }
     } catch (e, stackTrace) {
       ApiLogger.error('SubscriptionScreen: Failed to load subscription data: $e', e, stackTrace);
-      
+
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = mapErrorToMessage(e);
           _loading = false;
         });
       }
@@ -338,11 +339,12 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       }
     } catch (e, stackTrace) {
       ApiLogger.error('SubscriptionScreen: Failed to subscribe: $e', e, stackTrace);
-      
+
       if (mounted) {
+        final errorMsg = mapErrorToMessage(e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('error_subscribing'.tr(args: [e.toString()])),
+            content: Text(errorMsg),
             backgroundColor: AppColors.error,
             duration: const Duration(seconds: 3),
           ),

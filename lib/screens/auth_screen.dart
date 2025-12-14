@@ -63,7 +63,7 @@ class AuthScreen extends StatelessWidget {
       messages: LoginMessages(
         userHint: 'email_hint'.tr(),
         passwordHint: 'password_hint'.tr(),
-        confirmPasswordHint: 'confirm_password_error'.tr(),
+        confirmPasswordHint: 'password_hint'.tr(),
         loginButton: 'login'.tr(),
         signupButton: 'signup'.tr(),
         forgotPasswordButton: 'forgot_password'.tr(),
