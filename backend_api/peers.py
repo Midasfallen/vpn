@@ -209,14 +209,21 @@ def create_peer(  # noqa: C901 - function is intentionally a bit complex; refact
             # For db or host keys generate a minimal wg-quick client config from
             # the stored values so that the mobile app can import it.
             if getattr(peer, "wg_private_key", None) and getattr(peer, "wg_public_key", None):
-                # Build a minimal config
+                # Get server configuration from environment
+                server_public_key = os.getenv("WG_SERVER_PUBLIC_KEY", "")
+                endpoint = os.getenv("WG_ENDPOINT", "")
+                dns = os.getenv("WG_DNS", "8.8.8.8,1.1.1.1")
+
+                # Build a proper client config with server public key
                 cfg_text = (
                     "[Interface]\n"
                     f"PrivateKey = {peer.wg_private_key}\n"
-                    f"Address = {peer.wg_ip}\n\n"
+                    f"Address = {peer.wg_ip}\n"
+                    f"DNS = {dns}\n\n"
                     "[Peer]\n"
-                    f"PublicKey = {peer.wg_public_key}\n"
+                    f"PublicKey = {server_public_key}\n"
                     f"AllowedIPs = {peer.allowed_ips or '0.0.0.0/0'}\n"
+                    f"Endpoint = {endpoint}\n"
                 )
         if cfg_text:
             enc = encrypt_text(cfg_text)
