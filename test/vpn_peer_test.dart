@@ -41,7 +41,7 @@ void main() {
           '/tariffs/', {'name': tariffName, 'price': 100},
           (json) => json as Map<String, dynamic>);
 
-      if (tariffRes != null && tariffRes['id'] != null) {
+      if (tariffRes['id'] != null) {
         await apiClient.post<Map<String, dynamic>>(
             '/auth/subscribe', {'tariff_id': tariffRes['id']},
             (json) => json as Map<String, dynamic>);

@@ -67,33 +67,33 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   Future<void> _loadSubscriptionStatus() async {
     try {
-      print('[DEBUG] HomeScreen._loadSubscriptionStatus() starting...');
+      debugPrint('[DEBUG] HomeScreen._loadSubscriptionStatus() starting...');
       final subscription = await vpnService.getActiveSubscription();
-      print('[DEBUG] HomeScreen loaded subscription: $subscription');
-      
+      debugPrint('[DEBUG] HomeScreen loaded subscription: $subscription');
+
       if (subscription == null) {
-        print('[DEBUG] Subscription is NULL - no active subscription');
+        debugPrint('[DEBUG] Subscription is NULL - no active subscription');
       } else {
-        print('[DEBUG] Subscription found:');
-        print('[DEBUG]   - status: ${subscription.status}');
-        print('[DEBUG]   - endedAt: ${subscription.endedAt}');
-        print('[DEBUG]   - tariffName: ${subscription.tariffName}');
-        print('[DEBUG]   - durationDays: ${subscription.durationDays}');
+        debugPrint('[DEBUG] Subscription found:');
+        debugPrint('[DEBUG]   - status: ${subscription.status}');
+        debugPrint('[DEBUG]   - endedAt: ${subscription.endedAt}');
+        debugPrint('[DEBUG]   - tariffName: ${subscription.tariffName}');
+        debugPrint('[DEBUG]   - durationDays: ${subscription.durationDays}');
       }
-      
+
       if (mounted) {
         setState(() {
           _subscription = subscription;
           if (subscription != null && subscription.status == 'active') {
             _hasActiveSubscription = true;
-            print('[DEBUG] Setting _hasActiveSubscription = true');
+            debugPrint('[DEBUG] Setting _hasActiveSubscription = true');
             // Parse endedAt to DateTime if it's not null and not empty
             if (subscription.endedAt != null && subscription.endedAt!.isNotEmpty) {
               try {
                 _subscriptionEnd = DateTime.parse(subscription.endedAt!);
-                print('[DEBUG] Parsed subscription end date: $_subscriptionEnd');
+                debugPrint('[DEBUG] Parsed subscription end date: $_subscriptionEnd');
               } catch (e) {
-                print('[DEBUG] Failed to parse endedAt date: $e');
+                debugPrint('[DEBUG] Failed to parse endedAt date: $e');
                 _subscriptionEnd = null;
               }
             } else {
@@ -102,13 +102,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           } else {
             _hasActiveSubscription = false;
             _subscriptionEnd = null;
-            print('[DEBUG] Setting _hasActiveSubscription = false (subscription is null or not active)');
+            debugPrint('[DEBUG] Setting _hasActiveSubscription = false (subscription is null or not active)');
           }
         });
       }
     } catch (e, stackTrace) {
-      print('[ERROR] Failed to load subscription status: $e');
-      print('[ERROR] Stack trace: $stackTrace');
+      debugPrint('[ERROR] Failed to load subscription status: $e');
+      debugPrint('[ERROR] Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
           _hasActiveSubscription = false;
