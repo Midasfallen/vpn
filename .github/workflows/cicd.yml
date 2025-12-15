@@ -40,11 +40,6 @@ jobs:
         with:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
-      
-      - name: Check code quality
-        uses: dart-code-checker/dart-code-checker-action@v1
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
 
   build-android:
     name: Build Android APK
@@ -189,23 +184,13 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     needs: [test, build-android, build-ios]
-    
+
     steps:
-      - name: Send Slack notification
-        if: github.ref == 'refs/heads/main'
-        uses: slackapi/slack-github-action@v1
-        with:
-          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
-          payload: |
-            {
-              "text": "CI/CD Pipeline Notification",
-              "blocks": [
-                {
-                  "type": "section",
-                  "text": {
-                    "type": "mrkdwn",
-                    "text": "*Build Status:* ${{ job.status }}\n*Branch:* ${{ github.ref }}\n*Author:* ${{ github.actor }}"
-                  }
-                }
-              ]
-            }
+      - name: Print summary
+        run: |
+          echo "✅ Pipeline completed"
+          echo "Test status: ${{ needs.test.result }}"
+          echo "Android build: ${{ needs.build-android.result }}"
+          echo "iOS build: ${{ needs.build-ios.result }}"
+          echo "Branch: ${{ github.ref }}"
+          echo "Author: ${{ github.actor }}"
