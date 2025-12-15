@@ -70,6 +70,15 @@ def create_peer(  # noqa: C901 - function is intentionally a bit complex; refact
     # only admin or the same user can create peer
     if not getattr(current_user, "is_admin", False) and current_user.id != target_user:
         raise HTTPException(status_code=403, detail="Not allowed")
+
+    # Проверка наличия активной подписки
+    from vpn_api import models
+    db_user_tariff = db.query(models.UserTariff).filter(
+        models.UserTariff.user_id == target_user,
+        models.UserTariff.status == "active"
+    ).first()
+    if not db_user_tariff:
+        raise HTTPException(status_code=402, detail="Нет активной подписки")
     # decide key policy: default keep key in DB; alternative 'host' generates key on host
     key_policy = os.getenv("WG_KEY_POLICY", "db")
     logger.info(f"[CREATE_PEER] user_id={current_user.id}, target_user={target_user}, policy={key_policy}")
@@ -210,19 +219,29 @@ def create_peer(  # noqa: C901 - function is intentionally a bit complex; refact
             # the stored values so that the mobile app can import it.
             if getattr(peer, "wg_private_key", None) and getattr(peer, "wg_public_key", None):
                 # Get server configuration from environment
-                server_public_key = os.getenv("WG_SERVER_PUBLIC_KEY", "")
-                endpoint = os.getenv("WG_ENDPOINT", "")
-                dns = os.getenv("WG_DNS", "8.8.8.8,1.1.1.1")
+                server_public_key = os.getenv("WG_SERVER_PUBLIC_KEY", "1SUivFxEBdU5SjpL2cLBykv/4HcotWpIrdSUGFDGIA8=")
+                endpoint = os.getenv("WG_ENDPOINT", "62.84.98.109:51821")
+                dns = os.getenv("WG_DNS", "1.1.1.1")
+                mtu = os.getenv("WG_MTU", "1420")
 
-                # Build a proper client config with server public key
+                # Ensure Address has /24 mask instead of /32
+                address = peer.wg_ip
+                if address and not ("/" in address):
+                    address = f"{address}/24"
+                elif address and address.endswith("/32"):
+                    address = address.replace("/32", "/24")
+
+                # Build a proper client config with server public key, DNS, Endpoint, MTU
                 cfg_text = (
                     "[Interface]\n"
                     f"PrivateKey = {peer.wg_private_key}\n"
-                    f"Address = {peer.wg_ip}\n"
-                    f"DNS = {dns}\n\n"
+                    f"Address = {address}\n"
+                    f"DNS = {dns}\n"
+                    f"MTU = {mtu}\n\n"
                     "[Peer]\n"
                     f"PublicKey = {server_public_key}\n"
-                    f"AllowedIPs = {peer.allowed_ips or '0.0.0.0/0'}\n"
+                    f"AllowedIPs = {peer.allowed_ips or '0.0.0.0/0, ::/0'}\n"
+                    f"PersistentKeepalive = 25\n"
                     f"Endpoint = {endpoint}\n"
                 )
         if cfg_text:

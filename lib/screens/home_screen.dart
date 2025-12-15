@@ -131,6 +131,19 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Future<void> _toggleVpn() async {
+    // Проверка наличия активной подписки
+    if (!_hasActiveSubscription) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('no_active_subscription'.tr()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
     if (_connected) {
       // Отключаемся от VPN
       setState(() {

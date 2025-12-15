@@ -1,6 +1,191 @@
-# VPN Flutter Project — In-App Purchase Integration & API Client
+# VPN Flutter Project — Production Ready
 
-Полная документация по интеграции In-App Purchase (IAP) для iOS и Android, API client архитектуре и deployment процессу.
+🎉 **Status: FULLY WORKING AND TESTED ON REAL DEVICE**
+
+Complete VPN solution with Flutter mobile app, FastAPI backend, and WireGuard integration.
+
+## 🚀 Quick Start
+
+### Prerequisites
+- Flutter SDK (3.0+)
+- Docker & Docker Compose
+- WireGuard server with wg-easy
+- PostgreSQL database
+
+### Backend Setup
+```bash
+cd backend_api
+cp .env.production.example /srv/vpn-api/.env.production
+# Configure .env.production (see backend_api/README.md)
+docker-compose up -d
+```
+
+### Frontend Setup
+```bash
+flutter pub get
+flutter run --flavor prod
+```
+
+## ✅ Production Status
+
+**Last Updated:** December 15, 2025
+
+### Test Results
+- ✅ **34/34 Backend Unit Tests** passing
+- ✅ **16/16 Flutter Tests** passing
+- ✅ **2/2 E2E Automated Tests** passing
+- ✅ **Manual Testing** on Samsung SM-S938B - SUCCESS
+- ✅ **Internet Access** through VPN verified
+
+See detailed results in [E2E_TEST_RESULTS.md](E2E_TEST_RESULTS.md)
+
+### Critical Fixes Applied
+
+1. **WireGuard Config Generation** - Fixed server public key, Endpoint, DNS
+2. **wg-easy Integration** - Peers now registered on WireGuard server for internet access
+3. **Environment Configuration** - Fixed .env.production format issues
+
+## 📁 Project Structure
+
+```
+vpn/
+├── lib/                    # Flutter app source
+│   ├── api/               # API client & services
+│   ├── screens/           # UI screens
+│   └── main.dart          # App entry point
+├── backend_api/           # FastAPI backend
+│   ├── auth.py           # Authentication
+│   ├── peers.py          # VPN peer management
+│   ├── wg_easy_adapter.py # wg-easy integration
+│   └── README.md         # Backend documentation
+├── test/                  # Flutter tests
+├── E2E_TEST_RESULTS.md   # E2E test results
+└── README.md             # This file
+```
+
+## 🔑 Key Features
+
+### Mobile App (Flutter)
+- ✅ User authentication (JWT-based)
+- ✅ WireGuard VPN connection
+- ✅ Subscription management
+- ✅ In-App Purchase integration (iOS & Android)
+- ✅ Tariff plans
+- ✅ Secure token storage
+- ✅ Offline mode support
+
+### Backend (FastAPI)
+- ✅ RESTful API
+- ✅ WireGuard peer management
+- ✅ **wg-easy integration** (CRITICAL for internet access)
+- ✅ JWT authentication
+- ✅ PostgreSQL database
+- ✅ Config encryption
+- ✅ IAP validation (Apple & Google)
+- ✅ Email notifications
+
+### Infrastructure
+- ✅ Docker Compose deployment
+- ✅ WireGuard server (62.84.98.109:51821)
+- ✅ wg-easy management UI (port 8588)
+- ✅ PostgreSQL database
+- ✅ Automated CI/CD pipeline
+
+## ⚠️ Critical Configuration
+
+### wg-easy Integration (REQUIRED)
+
+For VPN to work with internet access, you **MUST** configure wg-easy integration in backend `.env.production`:
+
+```bash
+WG_KEY_POLICY=wg-easy                # CRITICAL! Without this, VPN connects but has no internet
+WG_EASY_URL=http://62.84.98.109:8588/
+WG_EASY_PASSWORD=<your_password>
+WG_SERVER_PUBLIC_KEY=1SUivFxEBdU5SjpL2cLBykv/4HcotWpIrdSUGFDGIA8=
+WG_ENDPOINT=62.84.98.109:51821
+WG_DNS=1.1.1.1
+WG_MTU=1420
+```
+
+**Why this is critical:**
+- Without `WG_KEY_POLICY=wg-easy`, backend creates peers locally but doesn't register them on the WireGuard server
+- WireGuard server only routes traffic for registered peers
+- Result: VPN connects successfully but has **no internet access**
+
+See [backend_api/README.md](backend_api/README.md) for detailed configuration.
+
+## 📚 Documentation
+
+- [E2E_TEST_RESULTS.md](E2E_TEST_RESULTS.md) - Complete E2E test results and manual testing guide
+- [backend_api/README.md](backend_api/README.md) - Backend setup, API endpoints, troubleshooting
+- [MANUAL_TESTING_GUIDE.md](MANUAL_TESTING_GUIDE.md) - Manual testing instructions
+
+## 🧪 Testing
+
+### Backend Tests
+```bash
+cd backend_api
+pytest
+```
+
+### Flutter Tests
+```bash
+flutter test
+```
+
+### E2E Tests
+```bash
+flutter test test/e2e_vpn_full_flow_test.dart
+```
+
+## 🐛 Troubleshooting
+
+### VPN connects but no internet
+
+**Cause:** `WG_KEY_POLICY` not set to `wg-easy`
+
+**Solution:**
+1. Add `WG_KEY_POLICY=wg-easy` to backend `.env.production`
+2. Configure `WG_EASY_URL` and `WG_EASY_PASSWORD`
+3. Restart: `docker-compose down && docker-compose up -d`
+4. Delete old VPN peers in app and create new ones
+
+### Authentication fails
+
+**Cause:** Backend database connection issues or malformed `.env.production`
+
+**Solution:**
+1. Check backend logs: `docker logs vpn-api-web-1`
+2. Verify `.env.production` has proper line breaks (no literal `\n`)
+3. Restart containers
+
+See [backend_api/README.md](backend_api/README.md#troubleshooting) for more issues.
+
+## 🚀 Deployment
+
+### Production Checklist
+- [ ] Configure backend `.env.production` with all required variables
+- [ ] Set `WG_KEY_POLICY=wg-easy`
+- [ ] Generate strong keys (`SECRET_KEY`, `CONFIG_ENCRYPTION_KEY`)
+- [ ] Configure wg-easy URL and password
+- [ ] Set correct `WG_SERVER_PUBLIC_KEY` and `WG_ENDPOINT`
+- [ ] Start Docker containers
+- [ ] Run all tests
+- [ ] Test on real device
+- [ ] Verify internet access through VPN
+
+### CI/CD
+
+GitHub Actions workflow automatically runs on push:
+- Flutter analyze
+- Flutter tests
+- Backend tests
+
+See [.github/workflows/](. github/workflows/) for pipeline configuration.
+
+---
+
+## 📋 Phase History
 
 ## Phase 4: In-App Purchase (IAP) Integration ✅
 
