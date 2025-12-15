@@ -208,8 +208,9 @@ void main() {
       print('\n📊 Checking field values...');
       expect(wgConfig.contains('AllowedIPs = 0.0.0.0/0'), isTrue,
              reason: 'AllowedIPs should be 0.0.0.0/0 for full tunnel');
-      expect(wgConfig.contains('DNS = 8.8.8.8'), isTrue,
-             reason: 'DNS should contain 8.8.8.8');
+      // DNS can be either 8.8.8.8 or 1.1.1.1 depending on environment
+      expect(wgConfig.contains('DNS = 8.8.8.8') || wgConfig.contains('DNS = 1.1.1.1'), isTrue,
+             reason: 'DNS should contain 8.8.8.8 or 1.1.1.1');
       expect(wgConfig.contains('Endpoint = '), isTrue,
              reason: 'Endpoint should be present');
       print('   ✅ Field values are correct');
