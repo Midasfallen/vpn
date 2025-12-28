@@ -4,10 +4,17 @@ import 'package:easy_localization/easy_localization.dart';
 
 import '../api/client_instance.dart';
 import '../api/error_mapper.dart';
+import '../widgets/oauth_buttons.dart';
 
-/// AuthScreen - экран аутентификации с использованием flutter_login
-class AuthScreen extends StatelessWidget {
+/// AuthScreen - экран аутентификации с использованием flutter_login и OAuth
+class AuthScreen extends StatefulWidget {
   const AuthScreen({super.key});
+
+  @override
+  State<AuthScreen> createState() => _AuthScreenState();
+}
+
+class _AuthScreenState extends State<AuthScreen> {
 
   Future<String?> _authUser(LoginData data) async {
     final email = data.name.trim();
@@ -52,6 +59,25 @@ class AuthScreen extends StatelessWidget {
     return 'Функция восстановления пароля не реализована.';
   }
 
+  void _handleOAuthSuccess() {
+    // После успешного OAuth входа перенаправляем на главный экран
+    if (mounted) {
+      Navigator.pushReplacementNamed(context, '/home');
+    }
+  }
+
+  void _handleOAuthError(String error) {
+    // Показываем ошибку OAuth
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(error),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return FlutterLogin(
@@ -89,6 +115,17 @@ class AuthScreen extends StatelessWidget {
       onSubmitAnimationCompleted: () {
         Navigator.pushReplacementNamed(context, '/home');
       },
+      footer: 'Incamp VPN',
+      children: [
+        // OAuth кнопки внизу экрана
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          child: OAuthButtons(
+            onSuccess: _handleOAuthSuccess,
+            onError: _handleOAuthError,
+          ),
+        ),
+      ],
     );
   }
 }

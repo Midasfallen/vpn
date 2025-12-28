@@ -73,5 +73,11 @@
   "ends_on": "Ends on",
   "days_remaining": "{0} days remaining",
   "subscription_ends_today": "Subscription ends today",
-  "subscription_ended": "Subscription has ended"
+  "subscription_ended": "Subscription has ended",
+  "sign_in_with_google": "Sign in with Google",
+  "sign_in_with_apple": "Sign in with Apple",
+  "or_continue_with": "Or continue with",
+  "oauth_error": "Authentication error: {0}",
+  "oauth_cancelled": "Authentication cancelled",
+  "oauth_unavailable": "This authentication method is not available on your device"
 }

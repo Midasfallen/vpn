@@ -34,6 +34,60 @@ class VpnService {
     return UserOut.fromJson(res);
   }
 
+  /// Вход через Google OAuth
+  ///
+  /// Backend должен реализовать endpoint POST /auth/google
+  /// Принимает: { "id_token": "..." }
+  /// Возвращает: { "access_token": "...", "refresh_token": "..." }
+  Future<String> loginWithGoogle(String idToken) async {
+    final res = await api.post<Map<String, dynamic>>(
+      '/auth/google',
+      {'id_token': idToken},
+      (json) => json as Map<String, dynamic>,
+    );
+    final token = res['access_token'] ?? res['token'];
+    final refresh = res['refresh_token'] ?? res['refresh'];
+    if (token == null) throw Exception('No token in Google login response: $res');
+    final tokenStr = token.toString();
+    api.setToken(tokenStr);
+    await TokenStorage.saveToken(tokenStr);
+    if (refresh != null) await TokenStorage.saveRefreshToken(refresh.toString());
+    ApiLogger.info('VpnService.loginWithGoogle: Успешный вход через Google');
+    return tokenStr;
+  }
+
+  /// Вход через Apple OAuth
+  ///
+  /// Backend должен реализовать endpoint POST /auth/apple
+  /// Принимает: { "identity_token": "...", "authorization_code": "...", "user_identifier": "..." }
+  /// Возвращает: { "access_token": "...", "refresh_token": "..." }
+  Future<String> loginWithApple({
+    required String? identityToken,
+    required String? authorizationCode,
+    required String userIdentifier,
+  }) async {
+    final body = <String, dynamic>{
+      'user_identifier': userIdentifier,
+    };
+    if (identityToken != null) body['identity_token'] = identityToken;
+    if (authorizationCode != null) body['authorization_code'] = authorizationCode;
+
+    final res = await api.post<Map<String, dynamic>>(
+      '/auth/apple',
+      body,
+      (json) => json as Map<String, dynamic>,
+    );
+    final token = res['access_token'] ?? res['token'];
+    final refresh = res['refresh_token'] ?? res['refresh'];
+    if (token == null) throw Exception('No token in Apple login response: $res');
+    final tokenStr = token.toString();
+    api.setToken(tokenStr);
+    await TokenStorage.saveToken(tokenStr);
+    if (refresh != null) await TokenStorage.saveRefreshToken(refresh.toString());
+    ApiLogger.info('VpnService.loginWithApple: Успешный вход через Apple');
+    return tokenStr;
+  }
+
   Future<UserOut> me() async {
     final u = await api.get<Map<String, dynamic>>('/auth/me', (json) => json as Map<String, dynamic>);
     return UserOut.fromJson(u);

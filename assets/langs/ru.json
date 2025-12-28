@@ -73,5 +73,11 @@
   "ends_on": "Истекает",
   "days_remaining": "Осталось {0} дней",
   "subscription_ends_today": "Подписка истекает сегодня",
-  "subscription_ended": "Подписка истекла"
+  "subscription_ended": "Подписка истекла",
+  "sign_in_with_google": "Войти через Google",
+  "sign_in_with_apple": "Войти через Apple",
+  "or_continue_with": "Или продолжить с",
+  "oauth_error": "Ошибка аутентификации: {0}",
+  "oauth_cancelled": "Аутентификация отменена",
+  "oauth_unavailable": "Этот способ аутентификации недоступен на вашем устройстве"
 }
