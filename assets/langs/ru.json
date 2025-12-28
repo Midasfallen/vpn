@@ -69,5 +69,9 @@
   "error_vpn_connect_no_subscription": "Для подключения к VPN необходима активная подписка. Пожалуйста, выберите тарифный план.",
   "user_not_active": "Пользователь неактивен",
   "admin_privileges_required": "Требуются права администратора",
-  "access_denied": "Доступ запрещен"
+  "access_denied": "Доступ запрещен",
+  "ends_on": "Истекает",
+  "days_remaining": "Осталось {0} дней",
+  "subscription_ends_today": "Подписка истекает сегодня",
+  "subscription_ended": "Подписка истекла"
 }

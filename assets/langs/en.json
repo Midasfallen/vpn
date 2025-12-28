@@ -69,5 +69,9 @@
   "error_vpn_connect_no_subscription": "An active subscription is required to connect to VPN. Please choose a plan.",
   "user_not_active": "User is not active",
   "admin_privileges_required": "Admin privileges required",
-  "access_denied": "Access denied"
+  "access_denied": "Access denied",
+  "ends_on": "Ends on",
+  "days_remaining": "{0} days remaining",
+  "subscription_ends_today": "Subscription ends today",
+  "subscription_ended": "Subscription has ended"
 }
