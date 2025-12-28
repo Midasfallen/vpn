@@ -6,6 +6,7 @@ import '../api/error_mapper.dart';
 import '../api/token_storage.dart';
 import '../api/connectivity_service.dart';
 import '../api/models.dart';
+import '../api/notification_service.dart';
 import '../theme/colors.dart';
 
 /// HomeScreen - главный экран приложения с переключателем VPN и управлением подписками
@@ -28,6 +29,8 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
+    // Инициализируем сервис уведомлений
+    notificationService.initialize();
     // Попытаться найти существующий peer у пользователя
     _loadPeer();
     // Загружаем статус подписки
@@ -92,6 +95,13 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               try {
                 _subscriptionEnd = DateTime.parse(subscription.endedAt!);
                 debugPrint('[DEBUG] Parsed subscription end date: $_subscriptionEnd');
+
+                // Проверяем и отправляем уведомления о скором истечении подписки
+                final daysRemaining = subscription.daysRemaining;
+                notificationService.checkAndNotify(
+                  daysRemaining: daysRemaining,
+                  expiryDate: _subscriptionEnd,
+                );
               } catch (e) {
                 debugPrint('[DEBUG] Failed to parse endedAt date: $e');
                 _subscriptionEnd = null;
@@ -434,9 +444,17 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       return _buildNoSubscriptionCard();
     }
 
-    final durationDays = _subscription!.durationDays;
-    final isLifetime = _subscription!.endedAt == null;
+    final daysRemaining = _subscription!.daysRemaining;
+    final isLifetime = _subscription!.endedAt == null || _subscription!.endedAt!.isEmpty;
     final tariffName = _subscription!.tariffName;
+
+    // Format end date for display
+    String? formattedEndDate;
+    if (!isLifetime && _subscriptionEnd != null) {
+      // Format: "28 Dec 2025"
+      final months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      formattedEndDate = '${_subscriptionEnd!.day} ${months[_subscriptionEnd!.month - 1]} ${_subscriptionEnd!.year}';
+    }
 
     return Container(
       decoration: BoxDecoration(
@@ -498,19 +516,47 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ),
             ),
             const SizedBox(height: 8),
-            // Duration
-            Text(
-              isLifetime
-                  ? 'lifetime_access'.tr()
-                  : '$durationDays ${'days'.tr()}',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: AppColors.textSecondary,
-                fontSize: 14,
+            // End date display
+            if (!isLifetime && formattedEndDate != null) ...[
+              Row(
+                children: [
+                  const Icon(
+                    Icons.event,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${'ends_on'.tr()}: $formattedEndDate',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textSecondary,
+                      fontSize: 14,
+                    ),
+                  ),
+                ],
               ),
-            ),
+              const SizedBox(height: 6),
+              // Days remaining
+              Text(
+                'days_remaining'.tr(args: [daysRemaining.toString()]),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.textTertiary,
+                  fontSize: 13,
+                ),
+              ),
+            ] else if (isLifetime)
+              Text(
+                'lifetime_access'.tr(),
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.textSecondary,
+                  fontSize: 14,
+                ),
+              ),
             // Warning if expiring soon
-            if (!isLifetime && durationDays < 7)
+            if (!isLifetime && daysRemaining < 7)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
                 child: Container(
@@ -519,13 +565,25 @@ class HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     borderRadius: BorderRadius.circular(8),
                   ),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                  child: Text(
-                    'subscription_expiring_soon'.tr(),
-                    style: const TextStyle(
-                      color: AppColors.warning,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.warning_amber_rounded,
+                        size: 16,
+                        color: AppColors.warning,
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          'subscription_expiring_soon'.tr(),
+                          style: const TextStyle(
+                            color: AppColors.warning,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),
