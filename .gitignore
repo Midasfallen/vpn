@@ -1,0 +1,61 @@
+# === Flutter / Dart (app/) ===
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# Flutter/Dart/Pub
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+app/build/
+
+# Symbolication & obfuscation
+app.*.symbols
+app.*.map.json
+
+# Android Studio
+app/android/app/debug
+app/android/app/profile
+app/android/app/release
+
+# === Python / Backend (backend/) ===
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+.venv/
+env/
+venv/
+.pytest_cache/
+*.whl
+.mypy_cache/
+.ruff_cache/
+
+# Backend secrets & local DB
+.env.production
+backend/.github/deploy_key
+backend/alembic_local.db
+
+# === General ===
+.coverage
+*.db
+!backend/alembic/**
