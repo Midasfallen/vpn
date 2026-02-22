@@ -1,0 +1,147 @@
+name: Run migrations
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type YES to confirm running migrations on the remote DB (required)'
+        required: true
+        default: 'NO'
+  push:
+    branches: [ main, master ]
+jobs:
+  migrate:
+    name: run alembic migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Early diagnostics for migrations (always)
+        if: ${{ always() }}
+        run: |
+          echo "Collecting early diagnostics for migrations job"
+          {
+            echo "--- date ---"; date || true
+            echo "--- runner ---"; uname -a || true
+            echo "--- pwd ---"; pwd || true
+            echo "--- limited env (no secrets) ---"; env | grep -v -E 'TOKEN|KEY|PASSWORD|SECRET' | sort || true
+            echo "--- ls -la workspace ---"; ls -la || true
+          } > migrations-early-diagnostics.txt 2>&1 || true
+
+      - name: Early run-start diagnostics (always)
+        if: ${{ always() }}
+        run: |
+          echo "run-start: $(date)" > run-start-diagnostics.txt
+          echo "job: migrate" >> run-start-diagnostics.txt
+          echo "github.event_name=${{ github.event_name }}" >> run-start-diagnostics.txt
+          echo "github.ref=${{ github.ref }}" >> run-start-diagnostics.txt
+          echo "Workflow inputs (limited):" >> run-start-diagnostics.txt
+          echo "confirm=${{ github.event.inputs.confirm || '' }}" >> run-start-diagnostics.txt
+
+      - name: Upload early migrations diagnostics (always)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: migrations-early-diagnostics
+          path: migrations-early-diagnostics.txt
+
+      - name: Sanity check
+        run: |
+          echo "Sanity: workflow parsed and runner started"
+
+      - name: Abort if manual dispatch not confirmed
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          if [ "${{ github.event.inputs.confirm }}" != "YES" ]; then
+            echo "Manual dispatch not confirmed. Set 'confirm' to YES to proceed."; exit 1
+          fi
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install system deps (pg client)
+        run: |
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r vpn_api/requirements.txt
+          pip install -r vpn_api/requirements-dev.txt
+          pip install alembic
+
+      - name: Backup remote Postgres (if using postgres)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Attempting backup using pg_dump -- will skip if DATABASE_URL is not postgres"
+          case "$DATABASE_URL" in
+            postgresql://*|postgresql+psycopg2://*|postgres://*)
+              echo "Detected Postgres URI, preparing connection info..."
+              DBURL_NORMALIZED=$(echo "$DATABASE_URL" | sed -E 's/\+psycopg2//')
+              export DBURL="$DBURL_NORMALIZED"
+              # Use bundled parser script to avoid YAML multiline issues
+              python parse_db.py > dbinfo.env
+              set -a
+              . ./dbinfo.env
+              set +a
+              echo "Parsed DB host=$PGHOST port=${PGPORT:-5432} user=$PGUSER database=$PGDATABASE" > pre-deploy-backup-inspect.txt
+              if [ -z "$PGHOST" ]; then
+                echo "Could not parse a host from DATABASE_URL, aborting backup" >> pre-deploy-backup-inspect.txt; exit 1
+              fi
+              export PGPASSWORD="$PGPASSWORD"
+              echo "pg_dump version:" >> pre-deploy-backup-inspect.txt
+              pg_dump --version >> pre-deploy-backup-inspect.txt 2>&1 || true
+              # connectivity check with retries
+              tries=0
+              max=3
+              until pg_isready -h "$PGHOST" -p "${PGPORT:-5432}" -U "$PGUSER" >/dev/null 2>&1 || [ $tries -ge $max ]; do
+                echo "pg_isready failed, retrying ($tries/$max)..." >> pre-deploy-backup-inspect.txt
+                tries=$((tries+1))
+                sleep 5
+              done
+              if ! pg_isready -h "$PGHOST" -p "${PGPORT:-5432}" -U "$PGUSER" >/dev/null 2>&1; then
+                echo "Database not accepting connections after retries" >> pre-deploy-backup-inspect.txt
+                unset PGPASSWORD
+                exit 1
+              fi
+              # run pg_dump verbose to capture messages
+              pg_dump --host="$PGHOST" --port="${PGPORT:-5432}" --username="$PGUSER" --dbname="$PGDATABASE" -F c -f backup.dump -v 2>> pre-deploy-backup-inspect.txt || true
+              RC=$?
+              echo "pg_dump exit code: $RC" >> pre-deploy-backup-inspect.txt
+              if [ ! -s backup.dump ]; then
+                echo "Backup file is empty or missing; see pre-deploy-backup-inspect.txt" >&2
+                cat pre-deploy-backup-inspect.txt || true
+                unset PGPASSWORD
+                exit 1
+              fi
+              unset PGPASSWORD
+              ;;
+            *)
+              echo "DATABASE_URL is not Postgres, skipping pg_dump"
+              ;;
+          esac
+
+      - name: Upload DB backup and inspect (always)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: db-backup-${{ github.job }}
+          path: |
+            backup.dump
+            pre-deploy-backup-inspect.txt
+
+      - name: Run alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Running alembic upgrade head"
+          alembic -c alembic.ini upgrade head
+
+      - name: Show current alembic revision
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          alembic -c alembic.ini current

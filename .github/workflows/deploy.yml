@@ -1,0 +1,402 @@
+name: CI & Deploy
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Early diagnostics (always)
+        if: ${{ always() }}
+        run: |
+          echo "Collecting early diagnostics for deploy job"
+          {
+            echo "--- date ---"; date || true
+            echo "--- runner info ---"; uname -a || true
+            echo "--- pwd ---"; pwd || true
+            echo "--- limited env (no secrets) ---"; env | grep -v -E 'TOKEN|KEY|PASSWORD|SECRET' | sort || true
+            echo "--- ls -la workspace ---"; ls -la || true
+          } > deploy-early-diagnostics.txt 2>&1 || true
+
+      - name: Upload early diagnostics artifact (always)
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-early-diagnostics
+          path: deploy-early-diagnostics.txt
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          # Install runtime and dev dependencies using the interpreter's pip to avoid PATH surprises
+          python -m pip install -r vpn_api/requirements.txt
+          # Ensure dev dependencies are always installed so pytest and test helpers are available
+          python -m pip install -r vpn_api/requirements-dev.txt
+      - name: Debug test environment
+        run: |
+          echo "--- python and pytest info ---"
+          python -V || true
+          python -m pip show pytest || true
+          echo "--- env vars ---"
+          python -c "import os; print('DEV_INIT_DB=', os.environ.get('DEV_INIT_DB')); print('DATABASE_URL=', os.environ.get('DATABASE_URL')); import os as _os; print('PWD=', _os.getcwd())"
+          echo "--- vpn_api dir listing ---"
+          ls -la vpn_api || true
+          echo "--- conftest.py preview ---"
+          sed -n '1,200p' vpn_api/conftest.py || true
+      - name: Run tests
+        run: |
+          # run pytest via the interpreter to guarantee the correct executable is used
+          python -m pytest -q
+      - name: Prepare image name and tag
+        env:
+          DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          echo "Preparing image tag"
+          IMAGE_TAG=${GITHUB_SHA::8}
+          # sanitize registry: trim whitespace and remove trailing slashes
+          DOCKER_REGISTRY_CLEAN=$(echo "${DOCKER_REGISTRY}" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' | sed -E 's:/*$::')
+          if [ -n "${DOCKER_REGISTRY_CLEAN}" ]; then
+            REG_PREFIX="${DOCKER_REGISTRY_CLEAN}/"
+          else
+            REG_PREFIX=""
+          fi
+          # sanitize username: if an email was used, drop the domain part after '@', then lowercase and replace invalid chars with '-'
+          RAW_USER=$(echo "${DOCKER_USERNAME}" | sed -E 's/@.*$//')
+          SANITIZED_USER=$(echo "${RAW_USER}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_.-]/-/g' | sed -E 's/^-+|-+$//g')
+          IMAGE_FULL="${REG_PREFIX}${SANITIZED_USER}/vpn-api:${IMAGE_TAG}"
+          echo "IMAGE_TAG=${IMAGE_TAG}" >> $GITHUB_ENV
+          echo "IMAGE_FULL=${IMAGE_FULL}" >> $GITHUB_ENV
+          echo "Prepared IMAGE_FULL=${IMAGE_FULL}"
+          # quick validation: no spaces or asterisks allowed; fail early with actionable message
+          if echo "${IMAGE_FULL}" | grep -q '[*[:space:]]'; then
+            echo "ERROR: IMAGE_FULL contains invalid characters: '${IMAGE_FULL}'" >&2
+            echo "Please check secrets DOCKER_REGISTRY and DOCKER_USERNAME: they must not contain '*' or spaces and username should be lowercase." >&2
+            exit 1
+          fi
+      - name: Build docker image (push if creds present)
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DOCKER_REGISTRY: ${{ secrets.DOCKER_REGISTRY }}
+        run: |
+          echo "Building image $IMAGE_FULL (push if registry creds present)"
+          docker buildx create --use --driver docker-container || true
+            login_ok=0
+            if [ -n "${DOCKER_USERNAME}" ] && [ -n "${DOCKER_PASSWORD}" ]; then
+              echo "Attempting docker login to registry '${DOCKER_REGISTRY:-index.docker.io}'"
+              echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin "${DOCKER_REGISTRY:-}" 2>&1 || login_ok=$?
+              if [ "$login_ok" -eq 0 ]; then
+                echo "Docker login succeeded"
+              else
+                echo "Docker login failed with code $login_ok — will fallback to local build (no push)"
+              fi
+            else
+              echo "No registry credentials provided — will fallback to local build (no push)"
+              login_ok=2
+            fi
+
+            if [ "$login_ok" -eq 0 ]; then
+              echo "Login OK — performing buildx with --push"
+              docker buildx build --platform linux/amd64 -t "$IMAGE_FULL" --push .
+              rc=$?
+              if [ $rc -ne 0 ]; then
+                echo "Remote push failed (buildx exit code $rc). Falling back to local load build for resilience."
+                docker buildx build --platform linux/amd64 -t "$IMAGE_FULL" --load .
+              fi
+            else
+              echo "Performing local build with --load"
+              docker buildx build --platform linux/amd64 -t "$IMAGE_FULL" --load .
+            fi
+      - name: Create DB backup - build job
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          if [ -z "${DATABASE_URL}" ]; then
+            echo "DATABASE_URL not set, skipping backup"
+            exit 0
+          fi
+          echo "Installing pg_dump (postgresql-client)"
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          echo "Creating database backup before deploy (build job)"
+          # normalize and parse connection info to avoid local unix socket fallback
+          DBURL_NORMALIZED=$(echo "$DATABASE_URL" | sed -E 's/\+psycopg2//')
+          export DBURL="$DBURL_NORMALIZED"
+          python parse_db.py > dbinfo.env
+          set -a
+          . ./dbinfo.env
+          set +a
+          echo "Parsed DB host=$PGHOST port=${PGPORT:-5432} user=$PGUSER database=$PGDATABASE"
+          if [ -z "$PGHOST" ]; then
+            echo "Could not parse a host from DATABASE_URL, skipping backup"; exit 1
+          fi
+          export PGPASSWORD="$PGPASSWORD"
+          # retry pg_dump up to 3 times with exponential backoff
+          tries=0
+          max_tries=3
+          rc=0
+          while [ $tries -lt $max_tries ]; do
+            tries=$((tries+1))
+            echo "pg_dump attempt $tries/$max_tries..." >> backup-inspect.txt 2>&1 || true
+            pg_dump --host="$PGHOST" --port="${PGPORT:-5432}" --username="$PGUSER" --dbname="$PGDATABASE" -Fc -f backup.dump 2>> backup-inspect.txt && rc=$? || rc=$?
+            if [ $rc -eq 0 ] && [ -s backup.dump ]; then
+              break
+            fi
+            sleep $((tries * 5))
+          done
+          echo "pg_dump exit code after retries: $rc" >> backup-inspect.txt 2>&1 || true
+          if [ $rc -ne 0 ] || [ ! -s backup.dump ]; then
+            echo "pg_dump failed after $tries attempts or produced empty backup" >> backup-inspect.txt 2>&1 || true
+            unset PGPASSWORD
+            # preserve diagnostics and fail the job so artifacts are uploaded by the always() steps
+            exit 1
+          fi
+
+      - name: Inspect DB backup before upload - build job
+        run: |
+          echo "--- ls -la (workspace) ---"
+          ls -la || true
+          echo "--- ls -la (backup.dump) ---"
+          ls -la backup.dump || true
+          echo "--- file type ---"
+          file backup.dump || true
+          echo "--- head of backup.dump (first 256 bytes as hex) ---"
+          if [ -f backup.dump ]; then head -c 256 backup.dump | xxd -p | fold -w 2 | sed 's/.*/& /' | tr -d '\n'; echo; else echo 'backup.dump not found'; fi
+
+      - name: Save DB backup diagnostics to artifact - build job
+        run: |
+          echo "Saving diagnostic output to backup-inspect.txt"
+          {
+            echo "--- python and pytest info ---"
+            python -V || true
+            python -m pip show pytest || true
+            echo "--- ls -la (workspace) ---"
+            ls -la || true
+            echo "--- ls -la (backup.dump) ---"
+            ls -la backup.dump || true
+            echo "--- file type ---"
+            file backup.dump || true
+            echo "--- head of backup.dump (first 256 bytes as hex) ---"
+            if [ -f backup.dump ]; then head -c 256 backup.dump | xxd -p | fold -w 2 | sed 's/.*/& /' | tr -d '\n'; echo; else echo 'backup.dump not found'; fi
+          } > backup-inspect.txt 2>&1 || true
+
+      - name: Upload DB backup diagnostics artifact - build job
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-deploy-backup-inspect-${{ github.job }}
+          path: backup-inspect.txt
+          if-no-files-found: warn
+
+      - name: Upload DB backup artifact - build job
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-deploy-backup-${{ github.job }}
+          path: backup.dump
+          if-no-files-found: warn
+
+      - name: Post-install diagnostics
+        run: |
+          echo "--- pip list ---"
+          python -m pip list
+          echo "--- pytest via python -m pytest --version ---"
+          python -m pytest --version || true
+
+      - name: Collect and upload diagnostic snapshot (always) - build job
+        if: ${{ always() }}
+        run: |
+          echo "Collecting diagnostic snapshot into snapshot.txt"
+          {
+            echo "--- python and pytest info ---"
+            python -V || true
+            python -m pip show pytest || true
+            echo "--- env vars (partial) ---"
+            python -c "import os; print('DEV_INIT_DB=', os.environ.get('DEV_INIT_DB')); print('PWD=', __import__('os').getcwd())" || true
+            echo "--- ls -la (workspace) ---"
+            ls -la || true
+            echo "--- ls -la (backup.dump) ---"
+            ls -la backup.dump || true
+            echo "--- head of backup.dump (first 256 bytes as hex) ---"
+            if [ -f backup.dump ]; then head -c 256 backup.dump | xxd -p | fold -w 2 | sed 's/.*/& /' | tr -d '\n'; echo; else echo 'backup.dump not found'; fi
+          } > snapshot.txt 2>&1 || true
+
+      - name: Upload diagnostic snapshot artifact (always) - build job
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-deploy-snapshot-${{ github.job }}
+          path: snapshot.txt
+
+  deploy:
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create DB backup (pg_dump)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          echo "Installing pg_dump (postgresql-client)"
+          sudo apt-get update && sudo apt-get install -y postgresql-client
+          echo "Creating database backup before deploy"
+          DBURL_NORMALIZED=$(echo "$DATABASE_URL" | sed -E 's/\+psycopg2//')
+          export DBURL="$DBURL_NORMALIZED"
+          python parse_db.py > dbinfo.env
+          set -a
+          . ./dbinfo.env
+          set +a
+          echo "Parsed DB host=$PGHOST port=${PGPORT:-5432} user=$PGUSER database=$PGDATABASE"
+          if [ -z "$PGHOST" ]; then
+            echo "Could not parse a host from DATABASE_URL, aborting"; exit 1
+          fi
+          export PGPASSWORD="$PGPASSWORD"
+          # retry pg_dump up to 3 times with exponential backoff
+          tries=0
+          max_tries=3
+          rc=0
+          while [ $tries -lt $max_tries ]; do
+            tries=$((tries+1))
+            echo "pg_dump attempt $tries/$max_tries..." >> pre-deploy-backup-inspect.txt 2>&1 || true
+            pg_dump --host="$PGHOST" --port="${PGPORT:-5432}" --username="$PGUSER" --dbname="$PGDATABASE" -Fc -f backup.dump 2>> pre-deploy-backup-inspect.txt && rc=$? || rc=$?
+            if [ $rc -eq 0 ] && [ -s backup.dump ]; then
+              break
+            fi
+            sleep $((tries * 5))
+          done
+          echo "pg_dump exit code after retries: $rc" >> pre-deploy-backup-inspect.txt 2>&1 || true
+          if [ $rc -ne 0 ] || [ ! -s backup.dump ]; then
+            echo "pg_dump failed after $tries attempts or produced empty backup" >> pre-deploy-backup-inspect.txt 2>&1 || true
+            unset PGPASSWORD
+            exit 1
+          fi
+          echo "Backup written to backup.dump"
+      - name: Upload DB backup as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pre-deploy-backup-${{ github.job }}
+          path: backup.dump
+      - name: Set up SSH (from secret, validated)
+        run: |
+          echo "Setting up SSH from secret (clean + validate)"
+          mkdir -p ~/.ssh
+          # write private key from secret to file securely, strip CRLF
+          printf '%s\n' "$SSH_PRIVATE_KEY" | sed 's/\r$//' > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # validate key: attempt to produce public key from private key
+          set +e
+          ssh-keygen -y -f ~/.ssh/id_ed25519 > /tmp/id_ed25519.pub 2>/tmp/ssh_key_err || true
+          ret=$?
+          set -e
+          if [ $ret -ne 0 ] || [ ! -s /tmp/id_ed25519.pub ]; then
+            echo "Private key validation failed. Contents of /tmp/ssh_key_err:" >&2
+            cat /tmp/ssh_key_err >&2 || true
+            echo "Failing the job so secret can be rechecked." >&2
+            exit 1
+          fi
+          # populate known_hosts for the deploy host to avoid interactive prompt
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts || true
+          chmod 644 ~/.ssh/known_hosts || true
+          # start ssh-agent and add the key
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/id_ed25519
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      - name: Ensure remote path exists
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "mkdir -p '${{ secrets.DEPLOY_PATH }}'"
+      - name: Rsync files to server
+        run: |
+          rsync -avz --delete --exclude '.git' --exclude 'venv' ./ ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }}:${{ secrets.DEPLOY_PATH }}
+      - name: Write .env.production on server (if provided)
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          if [ -n "${ENV_PRODUCTION}" ]; then
+            echo "Writing .env.production to remote host before migrations"
+            # encode content to base64 locally to avoid any quoting/escape issues, then decode on remote
+            B64_ENV=$(printf '%s' "${ENV_PRODUCTION}" | base64 -w0)
+            ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" "printf '%s' '${B64_ENV}' | base64 -d > '${DEPLOY_PATH}/.env.production' && chmod 600 '${DEPLOY_PATH}/.env.production'"
+          else
+            echo "ENV_PRODUCTION not set, skipping .env.production creation"
+          fi
+      - name: Synthesize .env.production from DATABASE_URL and SECRET_KEY (if needed)
+        env:
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          ENV_PRODUCTION: ${{ secrets.ENV_PRODUCTION }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY }}
+        run: |
+          if [ -n "${ENV_PRODUCTION}" ]; then
+            echo "ENV_PRODUCTION provided, skipping synthesis"
+            exit 0
+          fi
+          if [ -z "${DATABASE_URL}" ] || [ -z "${SECRET_KEY}" ]; then
+            echo "DATABASE_URL or SECRET_KEY missing from secrets; cannot synthesize .env.production"
+            exit 0
+          fi
+          echo "ENV_PRODUCTION not set — synthesizing .env.production from individual secrets"
+          # build content with required keys; add UVICORN_WORKERS default
+          ENV_CONTENT="DATABASE_URL=${DATABASE_URL}\nUVICORN_WORKERS=2\nSECRET_KEY=${SECRET_KEY}"
+          echo "Writing synthesized .env.production to remote"
+          # encode to base64 locally to avoid escape/quoting issues and decode on remote
+          B64_ENV_CONTENT=$(printf '%s' "${ENV_CONTENT}" | base64 -w0)
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" "printf '%s' '${B64_ENV_CONTENT}' | base64 -d > '${DEPLOY_PATH}/.env.production' && chmod 600 '${DEPLOY_PATH}/.env.production'"
+
+
+      - name: SSH run migrations on server
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} "cd ${{ secrets.DEPLOY_PATH }} && docker compose run --rm -v $(pwd):/app web alembic -c /app/alembic.ini upgrade head || true"
+        env:
+          DOCKER_HOST: unix:///var/run/docker.sock
+      - name: SSH run remote deploy (docker compose)
+        env:
+          DOCKER_HOST: unix:///var/run/docker.sock
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          echo "Preparing remote deploy: login (if provided) and write env file"
+          # write env file on server if secret provided
+          if [ -n "${ENV_PRODUCTION}" ]; then
+            # ensure any '\n' sequences stored in the secret become real newlines by base64 roundtrip
+            B64_ENV=$(printf '%s' "${ENV_PRODUCTION}" | base64 -w0)
+            ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" "printf '%s' '${B64_ENV}' | base64 -d > '${DEPLOY_PATH}/.env.production' && chmod 600 '${DEPLOY_PATH}/.env.production'"
+          fi
+          # determine image name to pull (short sha tag) with sanitization
+          IMAGE_TAG=${GITHUB_SHA::8}
+          # sanitize registry: trim whitespace and remove trailing slashes
+          DOCKER_REGISTRY_CLEAN=$(echo "${DOCKER_REGISTRY}" | sed -E 's/^[[:space:]]+|[[:space:]]+$//g' | sed -E 's:/*$::')
+          if [ -n "${DOCKER_REGISTRY_CLEAN}" ]; then
+            REG_PREFIX="${DOCKER_REGISTRY_CLEAN}/"
+          else
+            REG_PREFIX=""
+          fi
+          # sanitize username: if an email was used, drop the domain part after '@', then lowercase and replace invalid chars with '-'
+          RAW_USER=$(echo "${DOCKER_USERNAME}" | sed -E 's/@.*$//')
+          SANITIZED_USER=$(echo "${RAW_USER}" | tr '[:upper:]' '[:lower:]' | sed -E 's/[^a-z0-9_.-]/-/g' | sed -E 's/^-+|-+$//g')
+          IMAGE_FULL="${REG_PREFIX}${SANITIZED_USER}/vpn-api:${IMAGE_TAG}"
+          echo "IMAGE_FULL will be: $IMAGE_FULL"
+          # quick validation: no spaces or asterisks allowed; fail early with actionable message
+          if echo "${IMAGE_FULL}" | grep -q '[*[:space:]]'; then
+            echo "ERROR: IMAGE_FULL contains invalid characters: '${IMAGE_FULL}'" >&2
+            echo "Please check secrets DOCKER_REGISTRY and DOCKER_USERNAME: they must not contain '*' or spaces and username should be lowercase." >&2
+            exit 1
+          fi
+          # perform docker login on remote server if registry creds provided
+          if [ -n "${DOCKER_USERNAME}" ] && [ -n "${DOCKER_PASSWORD}" ]; then
+            ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" "echo \"${DOCKER_PASSWORD}\" | docker login -u \"${DOCKER_USERNAME}\" --password-stdin ${DOCKER_REGISTRY:-} || true"
+          fi
+          # build on server: docker compose will use build: . and create the image locally (avoids registry friction)
+          ssh -o StrictHostKeyChecking=no "${DEPLOY_USER}@${DEPLOY_HOST}" "cd '${DEPLOY_PATH}' && docker compose up -d --build"
